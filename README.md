@@ -406,6 +406,7 @@ FastAPI auto-generates interactive API documentation:
 | GET | `/api/trends/` | Get trends data for a term |
 | GET | `/api/trends/recent/{search_term_id}` | Get recent trends |
 | POST | `/api/trends/ingest` | Ingest Google Trends data |
+| POST | `/api/alignment/` | Align market and trends data |
 | GET | `/api/market-data/` | Get market data |
 | GET | `/api/market-data/recent/{symbol}` | Get recent market data |
 | GET | `/api/features/` | Get engineered features |
@@ -452,6 +453,99 @@ Notes:
 - Only active search terms should be used for ingestion.
 - Duplicate dates for the same search term are automatically skipped.
 - The endpoint returns `502 Bad Gateway` if the external Google Trends provider is unavailable.
+
+---
+
+## Data Cleaning & Temporal Alignment
+
+### Overview
+
+Phase 5 implements data cleaning and temporal alignment for Google Trends and market data.
+
+The goal is to make raw data from both sources reliable and temporally compatible for feature engineering and ML.
+
+### Cleaning Rules
+
+#### Google Trends
+
+- Interest score must be numeric.
+- Interest score is preserved on its native 0–100 scale. Zero is a valid value and is not converted to NULL.
+- Records with missing dates or missing interest scores are dropped.
+- Duplicate `(search_term_id, date)` rows are deduplicated.
+- Provider metadata such as `isPartial` is removed.
+- Dates are sorted in ascending order.
+
+#### Market Data
+
+- Required fields: `date`, `close`, `volume`.
+- `close` must be positive; non-positive values are logged as warnings.
+- `volume` must be non-negative; negative values are logged as warnings.
+- For OHLC data, logical consistency is checked:
+  - `high >= open`, `high >= close`, `high >= low`
+  - `low <= open`, `low <= close`
+- Duplicate `(symbol, date)` rows are deduplicated.
+- Dates are sorted in ascending order.
+
+### Temporal Alignment
+
+Market trading dates are used as the primary timeline.
+
+Google Trends observations are aligned to market dates using explicit date matching.
+
+```
+Market dates: 2024-01-01, 2024-01-02, 2024-01-03, 2024-01-04, 2024-01-05
+Trends dates: 2024-01-01, 2024-01-02, 2024-01-04
+
+Aligned result:
+  date        | close | interest_score
+  2024-01-01  | 100   | 10
+  2024-01-02  | 101   | 20
+  2024-01-04  | 103   | 40
+```
+
+Unmatched dates are reported but not invented.
+
+Weekends and market holidays are not treated as missing market observations.
+
+### Data Quality Report
+
+The alignment API returns a quality report:
+
+```json
+{
+  "market_rows": 5,
+  "trends_rows": 3,
+  "valid_market_rows": 5,
+  "valid_trends_rows": 3,
+  "duplicate_market_rows": 0,
+  "duplicate_trends_rows": 0,
+  "aligned_rows": 3,
+  "unmatched_market_dates": ["2024-01-03"],
+  "unmatched_trends_dates": []
+}
+```
+
+### Leakage Prevention
+
+- Aligned rows never use future market or trends observations.
+- Date-based joins prevent row-number matching errors.
+- The alignment is deterministic and reproducible.
+
+### Alignment API
+
+```http
+POST /api/alignment/
+Content-Type: application/json
+
+{
+  "symbol": "NSEI",
+  "search_term_id": 1,
+  "start_date": "2024-01-01",
+  "end_date": "2024-01-07"
+}
+```
+
+Response includes aligned rows and a data quality report.
 
 ---
 
