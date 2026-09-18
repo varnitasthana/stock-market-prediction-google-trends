@@ -3,6 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from app.core.database import get_db
 from app.services.trends_service import TrendsService
+from app.schemas.trends import TrendsIngestRequest, TrendsIngestResponse, TermIngestResult
+from app.pipeline.trends_pipeline import TrendsIngestionService
+from app.pipeline.trends_provider import PytrendsProvider
 
 router = APIRouter()
 
@@ -30,3 +33,30 @@ async def get_recent_trends(search_term_id: int, limit: int = 100, db: AsyncSess
         {"id": d.id, "date": d.date.isoformat(), "interest_score": d.interest_score}
         for d in data
     ]
+
+
+@router.post("/ingest", response_model=TrendsIngestResponse)
+async def ingest_trends(request: TrendsIngestRequest, db: AsyncSession = Depends(get_db)):
+    from app.repositories.search_term_repo import SearchTermRepository
+
+    search_term = await SearchTermRepository(db).get_by_id(request.search_term_id)
+    if not search_term:
+        raise HTTPException(status_code=404, detail="Search term not found")
+
+    provider = PytrendsProvider()
+    ingestion_service = TrendsIngestionService(db, provider)
+    try:
+        result = await ingestion_service.ingest_term(
+            term=search_term.term,
+            start_date=request.start_date.isoformat(),
+            end_date=request.end_date.isoformat(),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Trends ingestion failed: {exc}") from exc
+
+    return TrendsIngestResponse(
+        requested_term_ids=[request.search_term_id],
+        results=[TermIngestResult(**result)],
+        total_inserted=result.get("inserted", 0),
+        total_duplicates_skipped=result.get("total_records", 0) - result.get("inserted", 0),
+    )
