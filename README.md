@@ -163,6 +163,141 @@ stock-market-behaviour-prediction/
 
 ---
 
+## Live Development Access
+
+### Local Development
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
+| OpenAPI JSON | http://localhost:8000/openapi.json |
+| Health Check | http://localhost:8000/api/health |
+
+### Public Deployment
+
+**Public URL:** NOT DEPLOYED YET
+
+This project runs locally only. No public hosting is configured.
+
+---
+
+## How to Start the Project
+
+### Option 1: Docker Compose (Recommended)
+
+```bash
+docker compose up --build
+```
+
+Services:
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
+- PostgreSQL: localhost:5432
+
+### Option 2: Manual
+
+**Terminal 1 — PostgreSQL:**
+```bash
+docker compose up -d postgres
+```
+
+**Terminal 2 — Backend:**
+```bash
+cd backend
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+**Terminal 3 — Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## Running Tests
+
+```bash
+cd backend
+pytest -v
+```
+
+Tests run against a dedicated PostgreSQL test database:
+`postgresql+asyncpg://postgres:postgres@localhost:5432/stock_prediction_test`
+
+Each test creates a fresh schema via `drop_all` / `create_all` and disposes the engine afterward.
+
+---
+
+## Google Trends Pipeline
+
+### Overview
+
+Phase 4 implements a Google Trends ingestion pipeline that:
+
+1. Retrieves active search terms from the database.
+2. Fetches interest-over-time data from Google Trends via `pytrends`.
+3. Normalizes the external response into the project's internal schema.
+4. Persists records to PostgreSQL while preventing duplicates.
+
+### Architecture
+
+```
+HTTP Request
+    ↓
+FastAPI Router (`POST /api/trends/ingest`)
+    ↓
+Pydantic Schema (`TrendsIngestRequest`)
+    ↓
+Trends Ingestion Service
+    ↓
+Trends Data Provider (abstraction)
+    ↓
+Pytrends Provider (implementation)
+    ↓
+Google Trends
+```
+
+Persistence:
+
+```
+Trends Ingestion Service
+    ↓
+Trends Repository
+    ↓
+SQLAlchemy AsyncSession
+    ↓
+PostgreSQL
+```
+
+### Provider Abstraction
+
+The project uses a `TrendsDataProvider` interface so the external Google Trends client can be changed without rewriting the ingestion service.
+
+Current implementation: `PytrendsProvider` wrapping `pytrends`.
+
+### Error Handling
+
+- `404` — search term not found
+- `502` — external Google Trends provider unavailable or returned invalid data
+- `422` — invalid request payload
+
+### Rate Limiting
+
+The provider includes a configurable delay (`PYTRENDS_SLEEP`) between requests to reduce the risk of rate limiting by Google Trends.
+
+### Retries
+
+The provider uses bounded retries through `pytrends`'s built-in retry configuration.
+
+---
+
 ## Setup
 
 ### Prerequisites
@@ -263,15 +398,60 @@ FastAPI auto-generates interactive API documentation:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/search-terms` | List search terms |
-| POST | `/api/search-terms` | Add search term |
-| GET | `/api/trends` | Get trends data |
-| GET | `/api/market-data` | Get market data |
-| GET | `/api/features` | Get engineered features |
-| POST | `/api/train` | Train a model |
-| GET | `/api/models` | List models |
-| POST | `/api/predict` | Generate prediction |
+| GET | `/api/search-terms/` | List search terms |
+| POST | `/api/search-terms/` | Add search term |
+| GET | `/api/search-terms/{id}` | Get search term |
+| PUT | `/api/search-terms/{id}` | Update search term |
+| DELETE | `/api/search-terms/{id}` | Delete search term |
+| GET | `/api/trends/` | Get trends data for a term |
+| GET | `/api/trends/recent/{search_term_id}` | Get recent trends |
+| POST | `/api/trends/ingest` | Ingest Google Trends data |
+| GET | `/api/market-data/` | Get market data |
+| GET | `/api/market-data/recent/{symbol}` | Get recent market data |
+| GET | `/api/features/` | Get engineered features |
+| GET | `/api/models/` | List model runs |
+| POST | `/api/models/` | Create model run |
+| GET | `/api/predictions/` | Get predictions |
 | GET | `/api/dashboard/summary` | Dashboard summary |
+
+### Trends Ingestion
+
+Ingest Google Trends data for a configured search term:
+
+```http
+POST /api/trends/ingest
+Content-Type: application/json
+
+{
+  "search_term_id": 1,
+  "start_date": "2024-01-01",
+  "end_date": "2024-01-07"
+}
+```
+
+Response:
+
+```json
+{
+  "requested_term_ids": [1],
+  "results": [
+    {
+      "term": "recession",
+      "total_records": 5,
+      "inserted": 5,
+      "duplicates_skipped": 0,
+      "error": null
+    }
+  ],
+  "total_inserted": 5,
+  "total_duplicates_skipped": 0
+}
+```
+
+Notes:
+- Only active search terms should be used for ingestion.
+- Duplicate dates for the same search term are automatically skipped.
+- The endpoint returns `502 Bad Gateway` if the external Google Trends provider is unavailable.
 
 ---
 
