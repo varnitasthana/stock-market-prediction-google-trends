@@ -8,6 +8,22 @@ from app.utils.validators import validate_trends_data
 
 logger = logging.getLogger(__name__)
 
+try:
+    import urllib3
+
+    if not hasattr(urllib3.Retry, "__patched_for_pytrends__"):
+        original_init = urllib3.Retry.__init__
+
+        def _patched_init(self, *args, **kwargs):
+            if "method_whitelist" in kwargs:
+                kwargs["allowed_methods"] = kwargs.pop("method_whitelist")
+            return original_init(self, *args, **kwargs)
+
+        urllib3.Retry.__init__ = _patched_init
+        urllib3.Retry.__patched_for_pytrends__ = True
+except Exception:
+    pass
+
 
 class TrendsDataProvider(ABC):
     @abstractmethod
@@ -19,12 +35,12 @@ class PytrendsProvider(TrendsDataProvider):
     def __init__(self, sleep_seconds: float = 1.0):
         self.sleep_seconds = sleep_seconds
 
-    async def fetch_term(self, term: str, start_date: str, end_date: str) -> pd.DataFrame:
-        import time
-        from pytrends.request import TrendReq
+    def _fetch_blocking(self, term: str, start_date: str, end_date: str) -> pd.DataFrame:
+        try:
+            from pytrends.request import TrendReq
+        except ImportError as exc:
+            raise RuntimeError("pytrends is not installed") from exc
 
-        time.sleep(self.sleep_seconds)
-        logger.info(f"Fetching Google Trends for term: {term}")
         pytrends = TrendReq(retries=3, backoff_factor=1)
         pytrends.build_payload([term], timeframe=f"{start_date} {end_date}")
         df = pytrends.interest_over_time()
@@ -34,5 +50,15 @@ class PytrendsProvider(TrendsDataProvider):
         df = df.reset_index()
         df["date"] = pd.to_datetime(df["date"]).dt.date
         df = df.rename(columns={term: "interest_score"})
-        df = validate_trends_data(df)
-        return df
+        return validate_trends_data(df)
+
+    async def fetch_term(self, term: str, start_date: str, end_date: str) -> pd.DataFrame:
+        import asyncio
+
+        logger.info("Fetching Google Trends for term: %s", term)
+        await asyncio.sleep(self.sleep_seconds)
+        try:
+            return await asyncio.to_thread(self._fetch_blocking, term, start_date, end_date)
+        except Exception as exc:
+            logger.error("Trends provider failed for %s: %s", term, exc)
+            raise
