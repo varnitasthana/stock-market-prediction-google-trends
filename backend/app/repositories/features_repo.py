@@ -1,0 +1,37 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, insert
+from app.models.database import EngineeredFeature
+
+
+class FeaturesRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_by_symbol_and_date_range(self, symbol: str, start_date, end_date):
+        stmt = (
+            select(EngineeredFeature)
+            .where(EngineeredFeature.symbol == symbol)
+            .where(EngineeredFeature.date >= start_date)
+            .where(EngineeredFeature.date <= end_date)
+            .order_by(EngineeredFeature.date)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    async def get_by_symbol_and_feature(self, symbol: str, feature_name: str, limit: int = 100):
+        stmt = (
+            select(EngineeredFeature)
+            .where(EngineeredFeature.symbol == symbol)
+            .where(EngineeredFeature.feature_name == feature_name)
+            .order_by(EngineeredFeature.date.desc())
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    async def bulk_insert(self, records: list[dict]):
+        if not records:
+            return
+        stmt = insert(EngineeredFeature).values(records)
+        await self.db.execute(stmt)
+        await self.db.flush()
