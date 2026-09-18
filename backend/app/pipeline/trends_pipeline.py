@@ -7,6 +7,7 @@ from app.models.database import SearchTerm, TrendsData
 from app.repositories.search_term_repo import SearchTermRepository
 from app.repositories.trends_repo import TrendsRepository
 from app.pipeline.trends_provider import TrendsDataProvider
+from app.schemas.search_terms import SearchTermCreate
 from app.utils.validators import validate_trends_data
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class TrendsIngestionService:
 
         search_term = await self.repo.get_by_term(term)
         if not search_term:
-            search_term = await self.repo.create({"term": term, "category": "general", "active": True})
+            search_term = await self.repo.create(SearchTermCreate(term=term, category="general", active=True))
 
         existing = await self.trends_repo.get_by_term_and_date_range(
             search_term.id, date.fromisoformat(start_date), date.fromisoformat(end_date)
