@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.models.database import EngineeredFeature
 
 
@@ -32,6 +33,7 @@ class FeaturesRepository:
     async def bulk_insert(self, records: list[dict]):
         if not records:
             return
-        stmt = insert(EngineeredFeature).values(records)
+        stmt = pg_insert(EngineeredFeature).values(records)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["symbol", "date", "feature_name"])
         await self.db.execute(stmt)
         await self.db.flush()
