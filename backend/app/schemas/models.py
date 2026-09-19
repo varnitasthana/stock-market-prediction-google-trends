@@ -30,6 +30,7 @@ class ModelRunResponse(ModelRunBase):
     parameters: dict[str, Any] | None = None
     random_state: int | None = None
     feature_count: int | None = None
+    artifact_path: str | None = None
     metrics: dict[str, Any] | None = None
     created_at: date
 

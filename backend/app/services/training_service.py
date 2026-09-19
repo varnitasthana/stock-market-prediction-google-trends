@@ -1,7 +1,9 @@
 import logging
 from datetime import date
+from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -13,6 +15,9 @@ from app.repositories.model_repo import ModelRepository
 from app.schemas.models import ModelRunCreate
 
 logger = logging.getLogger(__name__)
+
+ARTIFACTS_DIR = Path(__file__).resolve().parent.parent.parent / "artifacts" / "models"
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class TrainingError(Exception):
@@ -112,6 +117,22 @@ class TrainingService:
             )
         )
 
+        artifact_path = ARTIFACTS_DIR / f"model_run_{model_run.id}.joblib"
+        joblib.dump(
+            {
+                "model": trainer.model,
+                "model_name": self.model_name,
+                "task_type": self.task_type,
+                "feature_columns": feature_columns,
+                "target_name": target_name,
+                "random_state": self.random_state,
+                "parameters": parameters,
+            },
+            artifact_path,
+        )
+        await self.repo.update_artifact_path(model_run.id, str(artifact_path))
+        model_run.artifact_path = str(artifact_path)
+
         return {
             "model_run_id": model_run.id,
             "model_name": self.model_name,
@@ -135,6 +156,7 @@ class TrainingService:
             "train_prediction_shape": list(train_predictions.shape),
             "validation_prediction_shape": list(validation_predictions.shape),
             "test_prediction_shape": list(test_predictions.shape),
+            "artifact_path": str(artifact_path),
         }
 
     @staticmethod

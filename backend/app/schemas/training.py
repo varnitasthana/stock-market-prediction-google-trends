@@ -39,3 +39,4 @@ class ModelTrainResponse(BaseModel):
     train_prediction_shape: list[int]
     validation_prediction_shape: list[int]
     test_prediction_shape: list[int]
+    artifact_path: str | None = None

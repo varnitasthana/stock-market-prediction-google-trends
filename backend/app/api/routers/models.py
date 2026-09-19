@@ -9,9 +9,11 @@ from app.ml.model_trainer import (
 )
 from app.schemas.evaluation import ClassificationEvaluationResponse, RegressionEvaluationResponse, EvaluationRequest
 from app.schemas.models import ModelRunCreate, ModelRunResponse
+from app.schemas.prediction import ClassificationPredictionResponse, PredictionRequest, RegressionPredictionResponse
 from app.schemas.training import SUPPORTED_TASKS, ModelTrainRequest, ModelTrainResponse
 from app.services.evaluation_service import EvaluationError, EvaluationService
 from app.services.model_service import ModelService
+from app.services.prediction_service import PredictionError, PredictionService
 from app.services.training_service import TrainingError, TrainingService
 
 router = APIRouter()
@@ -84,3 +86,18 @@ async def evaluate_model(request: EvaluationRequest, db: AsyncSession = Depends(
     if result["task_type"] == "classification":
         return ClassificationEvaluationResponse(**result)
     return RegressionEvaluationResponse(**result)
+
+
+@router.post("/predict")
+async def predict(request: PredictionRequest, db: AsyncSession = Depends(get_db)):
+    service = PredictionService(db, model_run_id=request.model_run_id, symbol=request.symbol, prediction_date=request.prediction_date)
+    try:
+        result = await service.predict()
+    except PredictionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
+
+    if result["task_type"] == "classification":
+        return ClassificationPredictionResponse(**result)
+    return RegressionPredictionResponse(**result)
