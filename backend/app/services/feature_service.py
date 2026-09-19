@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List
+
 from app.repositories.features_repo import FeaturesRepository
 
 

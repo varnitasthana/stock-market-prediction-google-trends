@@ -1,6 +1,8 @@
 import logging
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 from app.core.config import get_settings
 
 settings = get_settings()

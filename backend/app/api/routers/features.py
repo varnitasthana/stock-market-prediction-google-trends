@@ -1,11 +1,18 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
-from typing import List
+
 from app.core.database import get_db
+from app.schemas.features import (
+    FeatureGenerateRequest,
+    FeatureGenerateResponse,
+)
+from app.services.feature_engineering_service import (
+    FeatureEngineer,
+    FeatureEngineeringError,
+)
 from app.services.feature_service import FeatureService
-from app.services.feature_engineering_service import FeatureEngineer, FeatureEngineeringError
-from app.schemas.features import EngineeredFeatureResponse, FeatureGenerateRequest, FeatureGenerateResponse
 
 router = APIRouter()
 

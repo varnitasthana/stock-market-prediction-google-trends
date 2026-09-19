@@ -1,8 +1,6 @@
 import logging
-from datetime import date
-from typing import Dict, List
+
 import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +9,7 @@ class FeatureEngineer:
     def __init__(self, market_df: pd.DataFrame, trends_df: pd.DataFrame | None = None):
         self.market_df = market_df.copy()
         self.trends_df = trends_df.copy() if trends_df is not None else None
-        self.features: Dict[str, pd.Series] = {}
+        self.features: dict[str, pd.Series] = {}
 
     def create_market_features(self) -> pd.DataFrame:
         df = self.market_df.copy()
@@ -77,7 +75,7 @@ class FeatureEngineer:
         return df
 
     def get_feature_dataframe(self) -> pd.DataFrame:
-        market_features = self.create_market_features()
+        self.create_market_features()
         target_df = self.create_target()
 
         result = target_df.copy()
@@ -86,7 +84,6 @@ class FeatureEngineer:
             for term in self.trends_df["term"].unique() if "term" in self.trends_df.columns else [None]:
                 if term is None:
                     continue
-                term_df = self.trends_df[self.trends_df["term"] == term].copy()
                 term_features = self.create_trend_features(term)
                 if not term_features.empty:
                     term_features = term_features.rename(

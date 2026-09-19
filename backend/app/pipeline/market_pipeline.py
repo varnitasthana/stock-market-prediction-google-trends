@@ -1,11 +1,16 @@
 import logging
 from datetime import date
-from typing import List, Dict, Any
-import yfinance as yf
-import pandas as pd
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from typing import Any
 
-from app.models.database import MarketData
+import pandas as pd
+import yfinance as yf
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 from app.repositories.market_data_repo import MarketDataRepository
 from app.utils.validators import validate_ohlcv
 
@@ -39,7 +44,7 @@ class MarketIngestionService:
     def __init__(self, db):
         self.repo = MarketDataRepository(db)
 
-    async def ingest(self, symbol: str, start_date: str, end_date: str) -> Dict[str, Any]:
+    async def ingest(self, symbol: str, start_date: str, end_date: str) -> dict[str, Any]:
         logger.info(f"Starting market data ingestion for {symbol}")
         df = fetch_market_data(symbol, start_date, end_date)
         df = validate_ohlcv(df)

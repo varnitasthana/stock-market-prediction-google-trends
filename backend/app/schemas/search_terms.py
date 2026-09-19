@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class SearchTermBase(BaseModel):
@@ -32,13 +32,13 @@ class SearchTermCreate(SearchTermBase):
 
 
 class SearchTermUpdate(BaseModel):
-    term: Optional[str] = Field(None, max_length=255)
-    category: Optional[str] = None
-    active: Optional[bool] = None
+    term: str | None = Field(None, max_length=255)
+    category: str | None = None
+    active: bool | None = None
 
     @field_validator("term")
     @classmethod
-    def strip_and_validate_term(cls, v: Optional[str]) -> Optional[str]:
+    def strip_and_validate_term(cls, v: str | None) -> str | None:
         if v is None:
             return v
         v = v.strip()
@@ -50,7 +50,7 @@ class SearchTermUpdate(BaseModel):
 
     @field_validator("category")
     @classmethod
-    def strip_and_validate_category(cls, v: Optional[str]) -> Optional[str]:
+    def strip_and_validate_category(cls, v: str | None) -> str | None:
         if v is None:
             return v
         v = v.strip()

@@ -1,7 +1,6 @@
 import logging
-from typing import Dict, List, Tuple
+
 import pandas as pd
-import numpy as np
 from scipy.stats import pearsonr, spearmanr
 
 logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ class StatisticalAnalyzer:
                 logger.warning(f"Failed to compute Spearman for {col}: {e}")
         return pd.DataFrame(results)
 
-    def compute_lagged_correlations(self, lags: List[int]) -> pd.DataFrame:
+    def compute_lagged_correlations(self, lags: list[int]) -> pd.DataFrame:
         results = []
         target = self.df[self.target_col].dropna()
         for col in self.feature_cols:

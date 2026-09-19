@@ -1,15 +1,26 @@
 import logging
-from typing import Dict, Any
-import pandas as pd
+from typing import Any
+
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
+import pandas as pd
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class Evaluator:
     @staticmethod
-    def evaluate_classification(y_true: pd.Series, y_pred: pd.Series, y_proba: pd.Series | None = None) -> Dict[str, Any]:
+    def evaluate_classification(y_true: pd.Series, y_pred: pd.Series, y_proba: pd.Series | None = None) -> dict[str, Any]:
         metrics = {
             "accuracy": float(accuracy_score(y_true, y_pred)),
             "precision": float(precision_score(y_true, y_pred, zero_division=0)),
@@ -25,7 +36,7 @@ class Evaluator:
         return metrics
 
     @staticmethod
-    def evaluate_regression(y_true: pd.Series, y_pred: pd.Series) -> Dict[str, Any]:
+    def evaluate_regression(y_true: pd.Series, y_pred: pd.Series) -> dict[str, Any]:
         mse = mean_squared_error(y_true, y_pred)
         return {
             "mae": float(mean_absolute_error(y_true, y_pred)),

@@ -1,7 +1,7 @@
-from pydantic import BaseModel
 from datetime import date
-from typing import Optional
 from decimal import Decimal
+
+from pydantic import BaseModel
 
 
 class PredictionBase(BaseModel):
@@ -12,11 +12,11 @@ class PredictionBase(BaseModel):
 
 class PredictionResponse(PredictionBase):
     id: int
-    predicted_return: Optional[Decimal] = None
-    predicted_direction: Optional[int] = None
-    probability: Optional[Decimal] = None
-    actual_return: Optional[Decimal] = None
-    actual_direction: Optional[int] = None
+    predicted_return: Decimal | None = None
+    predicted_direction: int | None = None
+    probability: Decimal | None = None
+    actual_return: Decimal | None = None
+    actual_direction: int | None = None
     created_at: date
 
     model_config = {"from_attributes": True}

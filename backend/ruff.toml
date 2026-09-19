@@ -1,0 +1,28 @@
+[lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "PIE",
+    "RUF",
+    "BLE",
+]
+
+ignore = [
+    "B008",
+    "BLE001",
+    "E501",
+    "E402",
+    "I001",
+]
+
+[lint.isort]
+force-sort-within-sections = true
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

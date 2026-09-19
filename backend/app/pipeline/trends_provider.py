@@ -1,7 +1,6 @@
 import logging
-from datetime import date
-from typing import List, Dict, Any
 from abc import ABC, abstractmethod
+
 import pandas as pd
 
 from app.utils.validators import validate_trends_data

@@ -1,7 +1,5 @@
-from datetime import date
-from typing import List, Dict, Any
 from app.repositories.model_repo import ModelRepository
-from app.schemas.models import ModelRunCreate, ModelRunResponse
+from app.schemas.models import ModelRunCreate
 
 
 class ModelService:

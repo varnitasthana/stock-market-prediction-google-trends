@@ -1,14 +1,11 @@
 import logging
 from datetime import date
-from typing import List, Dict, Any
-import pandas as pd
+from typing import Any
 
-from app.models.database import SearchTerm, TrendsData
+from app.pipeline.trends_provider import TrendsDataProvider
 from app.repositories.search_term_repo import SearchTermRepository
 from app.repositories.trends_repo import TrendsRepository
-from app.pipeline.trends_provider import TrendsDataProvider
 from app.schemas.search_terms import SearchTermCreate
-from app.utils.validators import validate_trends_data
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,7 @@ class TrendsIngestionService:
         self.trends_repo = TrendsRepository(db)
         self.provider = provider
 
-    async def ingest_term(self, term: str, start_date: str, end_date: str) -> Dict[str, Any]:
+    async def ingest_term(self, term: str, start_date: str, end_date: str) -> dict[str, Any]:
         logger.info(f"Fetching Google Trends for term: {term}")
         df = await self.provider.fetch_term(term, start_date, end_date)
         if df.empty:
@@ -54,7 +51,7 @@ class TrendsIngestionService:
 
         return {"term": term, "total_records": len(df), "inserted": len(new_records)}
 
-    async def ingest_all_terms(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    async def ingest_all_terms(self, start_date: str, end_date: str) -> list[dict[str, Any]]:
         terms = await self.repo.get_all(active_only=True)
         results = []
         for term in terms:

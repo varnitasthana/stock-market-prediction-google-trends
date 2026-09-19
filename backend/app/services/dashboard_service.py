@@ -1,15 +1,14 @@
-from typing import Dict, Any, List
-from datetime import date
+from typing import Any
 
 
 class DashboardService:
     def __init__(self, db):
         self.db = db
 
-    async def get_summary(self, symbol: str) -> Dict[str, Any]:
+    async def get_summary(self, symbol: str) -> dict[str, Any]:
         from app.repositories.market_data_repo import MarketDataRepository
-        from app.repositories.prediction_repo import PredictionRepository
         from app.repositories.model_repo import ModelRepository
+        from app.repositories.prediction_repo import PredictionRepository
 
         market_repo = MarketDataRepository(self.db)
         prediction_repo = PredictionRepository(self.db)

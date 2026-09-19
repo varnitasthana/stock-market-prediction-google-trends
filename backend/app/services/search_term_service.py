@@ -1,6 +1,10 @@
 from fastapi import HTTPException
+
 from app.repositories.search_term_repo import SearchTermRepository
-from app.schemas.search_terms import SearchTermCreate, SearchTermUpdate, SearchTermResponse
+from app.schemas.search_terms import (
+    SearchTermCreate,
+    SearchTermUpdate,
+)
 
 
 class SearchTermService:

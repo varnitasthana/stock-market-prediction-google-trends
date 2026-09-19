@@ -3,24 +3,18 @@ import os
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from alembic import context
 
 # Add project root to sys.path so 'app' package is importable
 project_root = Path(__file__).parent.parent
 import sys
+
 sys.path.insert(0, str(project_root))
 
 from app.core.database import Base
-from app.models.database import (
-    SearchTerm,
-    MarketData,
-    TrendsData,
-    EngineeredFeature,
-    ModelRun,
-    Prediction,
-)
 
 # this is the Alembic Config object
 config = context.config

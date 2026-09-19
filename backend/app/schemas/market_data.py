@@ -1,24 +1,24 @@
-from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional, List
 from decimal import Decimal
+
+from pydantic import BaseModel, Field
 
 
 class MarketDataBase(BaseModel):
     symbol: str
     date: date
-    open: Optional[Decimal] = None
-    high: Optional[Decimal] = None
-    low: Optional[Decimal] = None
-    close: Optional[Decimal] = None
-    adj_close: Optional[Decimal] = None
-    volume: Optional[int] = None
+    open: Decimal | None = None
+    high: Decimal | None = None
+    low: Decimal | None = None
+    close: Decimal | None = None
+    adj_close: Decimal | None = None
+    volume: int | None = None
 
 
 class MarketDataResponse(MarketDataBase):
     id: int
-    daily_return: Optional[Decimal] = None
-    volatility: Optional[Decimal] = None
+    daily_return: Decimal | None = None
+    volatility: Decimal | None = None
 
     model_config = {"from_attributes": True}
 

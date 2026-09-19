@@ -1,6 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routers import search_terms, market_data, trends, features, models, predictions, dashboard, alignment, statistics, ml_dataset
+
+from app.api.routers import (
+    alignment,
+    dashboard,
+    features,
+    market_data,
+    ml_dataset,
+    models,
+    predictions,
+    search_terms,
+    statistics,
+    trends,
+)
 from app.core.logging import setup_logging
 
 app = FastAPI(

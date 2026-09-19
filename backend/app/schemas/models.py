@@ -1,6 +1,7 @@
-from pydantic import BaseModel
 from datetime import date
-from typing import Optional, Any, Dict, List
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class ModelRunBase(BaseModel):
@@ -12,6 +13,8 @@ class ModelRunBase(BaseModel):
     training_end: date
     evaluation_start: date
     evaluation_end: date
+    test_start_date: date | None = None
+    test_end_date: date | None = None
 
 
 class ModelRunCreate(ModelRunBase):
@@ -20,14 +23,14 @@ class ModelRunCreate(ModelRunBase):
 
 class ModelRunResponse(ModelRunBase):
     id: int
-    task_type: Optional[str] = None
-    target_name: Optional[str] = None
-    test_start_date: Optional[date] = None
-    test_end_date: Optional[date] = None
-    parameters: Optional[Dict[str, Any]] = None
-    random_state: Optional[int] = None
-    feature_count: Optional[int] = None
-    metrics: Optional[Dict[str, Any]] = None
+    task_type: str | None = None
+    target_name: str | None = None
+    test_start_date: date | None = None
+    test_end_date: date | None = None
+    parameters: dict[str, Any] | None = None
+    random_state: int | None = None
+    feature_count: int | None = None
+    metrics: dict[str, Any] | None = None
     created_at: date
 
     model_config = {"from_attributes": True}

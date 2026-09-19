@@ -1,13 +1,12 @@
 import logging
 from datetime import date
-from typing import List, Dict, Any, Optional
-import pandas as pd
+from typing import Any
+
 import numpy as np
+import pandas as pd
 from scipy import stats
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.repositories.features_repo import FeaturesRepository
-from app.models.database import EngineeredFeature
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class StatisticalAnalysisService:
     def __init__(self, db):
         self.features_repo = FeaturesRepository(db)
 
-    async def analyze(self, symbol: str, start_date: date, end_date: date) -> Dict[str, Any]:
+    async def analyze(self, symbol: str, start_date: date, end_date: date) -> dict[str, Any]:
         rows = await self.features_repo.get_by_symbol_and_date_range(symbol, start_date, end_date)
         if not rows:
             raise StatisticalAnalysisError(f"No engineered features found for {symbol} in range {start_date} to {end_date}")
@@ -72,7 +71,7 @@ class StatisticalAnalysisService:
         return wide
 
     @staticmethod
-    def _compute_descriptive_statistics(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    def _compute_descriptive_statistics(df: pd.DataFrame) -> list[dict[str, Any]]:
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         exclude = {"next_day_direction"}
         stats_list = []
@@ -93,7 +92,7 @@ class StatisticalAnalysisService:
             })
         return stats_list
 
-    def _compute_correlations(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
+    def _compute_correlations(self, df: pd.DataFrame) -> list[dict[str, Any]]:
         trends_features = self._discover_trends_features(df.columns.tolist())
         targets = ["daily_return", "next_day_return"]
         results = []
@@ -128,7 +127,7 @@ class StatisticalAnalysisService:
                 "method": "pearson",
                 "correlation": float(pearson_r),
                 "p_value": float(pearson_p),
-                "sample_size": int(len(valid)),
+                "sample_size": len(valid),
             })
             results.append({
                 "feature": feat,
@@ -136,7 +135,7 @@ class StatisticalAnalysisService:
                 "method": "spearman",
                 "correlation": float(spearman_r),
                 "p_value": float(spearman_p),
-                "sample_size": int(len(valid)),
+                "sample_size": len(valid),
             })
 
         if raw_pvalues:
@@ -150,8 +149,8 @@ class StatisticalAnalysisService:
 
         return results
 
-    def _compute_lag_analysis(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        lag_features = [c for c in df.columns if c.endswith("_trend_lag_1") or c.endswith("_trend_lag_3") or c.endswith("_trend_lag_7")]
+    def _compute_lag_analysis(self, df: pd.DataFrame) -> list[dict[str, Any]]:
+        lag_features = [c for c in df.columns if c.endswith(("_trend_lag_1", "_trend_lag_3", "_trend_lag_7"))]
         results = []
         for feat in lag_features:
             if feat not in df.columns or "next_day_return" not in df.columns:
@@ -165,11 +164,11 @@ class StatisticalAnalysisService:
                 "target": "next_day_return",
                 "correlation": float(r),
                 "p_value": float(p),
-                "sample_size": int(len(valid)),
+                "sample_size": len(valid),
             })
         return results
 
-    def _compute_direction_analysis(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _compute_direction_analysis(self, df: pd.DataFrame) -> dict[str, Any]:
         trends_features = self._discover_trends_features(df.columns.tolist())
         groups = {}
         for direction, group in df.groupby("next_day_direction"):
@@ -191,7 +190,7 @@ class StatisticalAnalysisService:
         return groups
 
     @staticmethod
-    def _discover_trends_features(columns: List[str]) -> List[str]:
+    def _discover_trends_features(columns: list[str]) -> list[str]:
         suffixes = ("_trend", "_trend_lag_1", "_trend_lag_3", "_trend_lag_7", "_trend_change")
         features = []
         for col in columns:

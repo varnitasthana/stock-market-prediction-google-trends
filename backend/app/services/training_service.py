@@ -106,6 +106,8 @@ class TrainingService:
                 training_end=splits["train_end_date"],
                 evaluation_start=splits["validation_start_date"],
                 evaluation_end=splits["validation_end_date"],
+                test_start_date=splits["test_start_date"],
+                test_end_date=splits["test_end_date"],
                 metrics=None,
             )
         )

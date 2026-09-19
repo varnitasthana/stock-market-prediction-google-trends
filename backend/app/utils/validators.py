@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import pandas as pd
 
@@ -19,9 +18,8 @@ def validate_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
     if (df["close"] <= 0).any():
         logger.warning("Found non-positive close prices")
 
-    if "volume" in df.columns:
-        if (df["volume"] < 0).any():
-            logger.warning("Found negative volume values")
+    if "volume" in df.columns and (df["volume"] < 0).any():
+        logger.warning("Found negative volume values")
 
     return df
 

@@ -1,11 +1,13 @@
 import logging
-from typing import Dict, Any, List, Tuple
-import pandas as pd
+from typing import Any
+
 import numpy as np
-from sklearn.linear_model import LogisticRegression, LinearRegression
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ class ModelTrainer:
     def _build_classification_model(self):
         if self.model_name == "logistic_regression":
             return Pipeline([
+                ("imputer", SimpleImputer(strategy="mean")),
                 ("scaler", StandardScaler()),
                 ("clf", LogisticRegression(max_iter=1000, random_state=self.random_state)),
             ])
@@ -52,6 +55,7 @@ class ModelTrainer:
     def _build_regression_model(self):
         if self.model_name == "linear_regression":
             return Pipeline([
+                ("imputer", SimpleImputer(strategy="mean")),
                 ("scaler", StandardScaler()),
                 ("reg", LinearRegression()),
             ])
@@ -73,22 +77,28 @@ class ModelTrainer:
             raise AttributeError(f"{self.model_name} does not support predict_proba")
         return self.model.predict_proba(X)
 
-    def get_feature_importance(self) -> Dict[str, float]:
+    def get_feature_importance(self) -> dict[str, float]:
         if hasattr(self.model, "feature_importances_"):
-            return dict(zip(self.feature_columns, self.model.feature_importances_))
+            return dict(zip(self.feature_columns, self.model.feature_importances_, strict=True))
         if hasattr(self.model, "named_steps") and hasattr(self.model.named_steps.get("clf", None), "feature_importances_"):
             clf = self.model.named_steps["clf"]
-            return dict(zip(self.feature_columns, clf.feature_importances_))
+            return dict(zip(self.feature_columns, clf.feature_importances_, strict=True))
         if hasattr(self.model, "named_steps") and hasattr(self.model.named_steps.get("reg", None), "feature_importances_"):
             reg = self.model.named_steps["reg"]
-            return dict(zip(self.feature_columns, reg.feature_importances_))
+            return dict(zip(self.feature_columns, reg.feature_importances_, strict=True))
         return {}
 
 
 class Evaluator:
     @staticmethod
-    def evaluate_classification(y_true: pd.Series, y_pred: np.ndarray, y_proba: np.ndarray | None = None) -> Dict[str, Any]:
-        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+    def evaluate_classification(y_true: pd.Series, y_pred: np.ndarray, y_proba: np.ndarray | None = None) -> dict[str, Any]:
+        from sklearn.metrics import (
+            accuracy_score,
+            confusion_matrix,
+            f1_score,
+            precision_score,
+            recall_score,
+        )
         metrics = {
             "accuracy": float(accuracy_score(y_true, y_pred)),
             "precision": float(precision_score(y_true, y_pred, zero_division=0)),
@@ -105,7 +115,7 @@ class Evaluator:
         return metrics
 
     @staticmethod
-    def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, Any]:
+    def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, Any]:
         from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
         mse = mean_squared_error(y_true, y_pred)
         return {

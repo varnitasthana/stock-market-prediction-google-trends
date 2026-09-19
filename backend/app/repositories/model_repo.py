@@ -1,8 +1,9 @@
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert
+
 from app.models.database import ModelRun
 from app.schemas.models import ModelRunCreate
-from datetime import date
 
 
 class ModelRepository:

@@ -1,5 +1,3 @@
-from datetime import date
-from typing import List
 from app.repositories.prediction_repo import PredictionRepository
 
 

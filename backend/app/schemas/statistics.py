@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional, List, Dict, Any
+
+from pydantic import BaseModel, Field
 
 
 class StatisticsAnalyzeRequest(BaseModel):
@@ -26,8 +26,8 @@ class CorrelationResult(BaseModel):
     correlation: float
     p_value: float
     sample_size: int
-    adjusted_p_value: Optional[float] = None
-    significant_at_0_05: Optional[bool] = None
+    adjusted_p_value: float | None = None
+    significant_at_0_05: bool | None = None
 
 
 class LagResult(BaseModel):
@@ -50,7 +50,7 @@ class StatisticsAnalyzeResponse(BaseModel):
     symbol: str
     date_range: str
     sample_size: int
-    descriptive_statistics: List[DescriptiveStat] = []
-    correlations: List[CorrelationResult] = []
-    lag_analysis: List[LagResult] = []
-    direction_analysis: Dict[str, List[DirectionGroupStats]] = {}
+    descriptive_statistics: list[DescriptiveStat] = []
+    correlations: list[CorrelationResult] = []
+    lag_analysis: list[LagResult] = []
+    direction_analysis: dict[str, list[DirectionGroupStats]] = {}

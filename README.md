@@ -1071,10 +1071,10 @@ Trained on Symbol: `^NSEI`, Date range: `2024-01-01` → `2024-06-30`
 
 | Model | Task | Target | Training Rows | Validation Rows | Test Rows | Features |
 |-------|------|--------|--------------|-----------------|-----------|----------|
-| Logistic Regression | classification | next_day_direction | 77 | 17 | 18 | 31 |
-| Random Forest Classifier | classification | next_day_direction | 77 | 17 | 18 | 31 |
-| Linear Regression | regression | next_day_return | 77 | 17 | 18 | 31 |
-| Random Forest Regressor | regression | next_day_return | 77 | 17 | 18 | 31 |
+| Logistic Regression | classification | next_day_direction | 79 | 17 | 18 | 31 |
+| Random Forest Classifier | classification | next_day_direction | 79 | 17 | 18 | 31 |
+| Linear Regression | regression | next_day_return | 79 | 17 | 18 | 31 |
+| Random Forest Regressor | regression | next_day_return | 79 | 17 | 18 | 31 |
 
 All four models train successfully. No performance conclusions are made in Phase 9.
 
@@ -1084,6 +1084,111 @@ All four models train successfully. No performance conclusions are made in Phase
 - Chronological Phase 8 splits are reused
 - Preprocessing scaler is fitted only on training data
 - Test set remains unseen
+
+---
+
+## Phase 10 — Model Evaluation
+
+Phase 10 evaluates the four baseline models trained in Phase 9 using the validation and test splits.
+
+### Pre-evaluation fix: row-count discrepancy
+
+Phase 8 originally reported 79 training rows. Phase 9 initially reported 77 because `get_splits()` independently dropped NaN feature rows after splitting, while `prepare_dataset()` did not. This was fixed by making `get_splits()` reuse `prepare_dataset()` as the single canonical dataset path. Both now consistently report 79 training rows.
+
+### What it does
+
+It re-trains each model on the canonical Phase 8 dataset and evaluates it on:
+
+- Validation split (17 samples)
+- Test split (18 samples)
+
+### Classification metrics
+
+- Accuracy
+- Precision
+- Recall
+- F1 Score
+- ROC-AUC (when both classes are present)
+- Confusion Matrix (TN, FP, FN, TP)
+- Class distribution
+- Majority-class baseline
+
+### Regression metrics
+
+- MAE
+- RMSE
+- R²
+- Historical mean baseline
+
+### Evaluation API
+
+```http
+POST /api/models/evaluate
+```
+
+Example request:
+
+```json
+{
+  "model_run_id": 1,
+  "evaluation_split": "test"
+}
+```
+
+Supported `evaluation_split` values: `validation`, `test`
+
+### Real-data evaluation results
+
+Evaluated on Symbol: `^NSEI`, Date range: `2024-01-01` → `2024-06-30`
+
+**Classification — Validation**
+
+| Model | Samples | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|-------|--------:|---------:|----------:|-------:|---:|--------:|
+| Logistic Regression | 17 | 0.3529 | 0.4000 | 0.2000 | 0.2667 | 0.4286 |
+| Random Forest Classifier | 17 | 0.4118 | 0.5000 | 0.4000 | 0.4444 | 0.3857 |
+
+**Classification — Test**
+
+| Model | Samples | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|-------|--------:|---------:|----------:|-------:|---:|--------:|
+| Logistic Regression | 18 | 0.6111 | 0.8000 | 0.6154 | 0.6957 | 0.6615 |
+| Random Forest Classifier | 18 | 0.7778 | 1.0000 | 0.6923 | 0.8182 | 0.7538 |
+
+**Regression — Validation**
+
+| Model | Samples | MAE | RMSE | R² |
+|-------|--------:|----:|-----:|---:|
+| Linear Regression | 17 | 0.0085 | 0.0117 | -0.2972 |
+| Random Forest Regressor | 17 | 0.0067 | 0.0107 | -0.0959 |
+
+**Regression — Test**
+
+| Model | Samples | MAE | RMSE | R² |
+|-------|--------:|----:|-----:|---:|
+| Linear Regression | 18 | 0.0102 | 0.0165 | 0.0799 |
+| Random Forest Regressor | 18 | 0.0092 | 0.0170 | 0.0132 |
+
+**Classification class distribution**
+
+| Split | Class 0 | Class 1 |
+|-------|--------:|--------:|
+| Validation | 7 (41.2%) | 10 (58.8%) |
+| Test | 5 (27.8%) | 13 (72.2%) |
+
+**Baselines**
+
+- Classification majority-class baseline: 58.8% (validation), 72.2% (test)
+- Regression mean-return baseline MAE: 0.0066 (validation), 0.0087 (test)
+
+### Limitations
+
+- Only 114 observations total
+- Only 18 test observations
+- No hyperparameter tuning
+- No model selection based on test results
+- Metrics are sample-specific and do not guarantee future performance
+- Google Trends correlation does not establish causation
 
 ---
 

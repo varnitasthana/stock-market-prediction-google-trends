@@ -1,11 +1,17 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
+
 from app.core.database import get_db
-from app.services.trends_service import TrendsService
-from app.schemas.trends import TrendsIngestRequest, TrendsIngestResponse, TermIngestResult
 from app.pipeline.trends_pipeline import TrendsIngestionService
 from app.pipeline.trends_provider import PytrendsProvider
+from app.schemas.trends import (
+    TermIngestResult,
+    TrendsIngestRequest,
+    TrendsIngestResponse,
+)
+from app.services.trends_service import TrendsService
 
 router = APIRouter()
 

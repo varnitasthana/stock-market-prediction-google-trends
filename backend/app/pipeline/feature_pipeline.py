@@ -1,6 +1,8 @@
 import logging
-from typing import Dict, Any
+from typing import Any
+
 import pandas as pd
+
 from app.ml.feature_engineer import FeatureEngineer
 from app.repositories.features_repo import FeaturesRepository
 
@@ -12,7 +14,7 @@ class FeaturePipeline:
         self.db = db
         self.repo = FeaturesRepository(db)
 
-    async def run(self, symbol: str, start_date: str, end_date: str, trends_data: pd.DataFrame | None = None) -> Dict[str, Any]:
+    async def run(self, symbol: str, start_date: str, end_date: str, trends_data: pd.DataFrame | None = None) -> dict[str, Any]:
         from app.repositories.market_data_repo import MarketDataRepository
         market_repo = MarketDataRepository(self.db)
 

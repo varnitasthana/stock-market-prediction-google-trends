@@ -1,22 +1,14 @@
-import pytest
-import pytest_asyncio
-import pandas as pd
-import numpy as np
 from datetime import date
-from decimal import Decimal
 
-from app.services.ml_dataset_service import MLDatasetService, MLDatasetError
-from app.schemas.ml_dataset import MLDatasetPrepareRequest
-from app.repositories.features_repo import FeaturesRepository
-from app.services.feature_engineering_service import FeatureEngineer
+import pytest
 
-from tests.conftest import client, db_session
+from app.services.ml_dataset_service import MLDatasetError, MLDatasetService
 
 
 @pytest.mark.asyncio
 async def test_wide_format_conversion(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -70,8 +62,8 @@ async def test_wide_format_conversion(client, db_session):
 
 @pytest.mark.asyncio
 async def test_target_separation(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -123,8 +115,8 @@ async def test_target_separation(client, db_session):
 
 @pytest.mark.asyncio
 async def test_chronological_split(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -182,8 +174,8 @@ async def test_chronological_split(client, db_session):
 
 @pytest.mark.asyncio
 async def test_split_ratios(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -236,8 +228,8 @@ async def test_split_ratios(client, db_session):
 
 @pytest.mark.asyncio
 async def test_duplicate_dates_handled(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -285,8 +277,8 @@ async def test_duplicate_dates_handled(client, db_session):
 
 @pytest.mark.asyncio
 async def test_missing_and_infinite_values_handled(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -335,8 +327,8 @@ async def test_missing_and_infinite_values_handled(client, db_session):
 
 @pytest.mark.asyncio
 async def test_target_validation(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -384,8 +376,8 @@ async def test_target_validation(client, db_session):
 
 @pytest.mark.asyncio
 async def test_leakage_prevention(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -435,8 +427,8 @@ async def test_leakage_prevention(client, db_session):
 
 @pytest.mark.asyncio
 async def test_date_ordering_validation(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -492,8 +484,8 @@ async def test_empty_dataset_error(client, db_session):
 
 @pytest.mark.asyncio
 async def test_insufficient_observations_error(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -525,8 +517,8 @@ async def test_insufficient_observations_error(client, db_session):
 
 @pytest.mark.asyncio
 async def test_ml_dataset_api_success(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
