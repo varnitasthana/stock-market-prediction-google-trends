@@ -815,6 +815,132 @@ A statistically significant correlation indicates a detectable linear or monoton
 
 ---
 
+## ML Dataset Preparation
+
+### Overview
+
+Phase 8 transforms the Phase 6 engineered features into a clean, model-ready dataset for machine learning in Phase 9.
+
+The dataset is prepared without training any models. The focus is on:
+- Wide-format conversion
+- Feature/target separation
+- Chronological train/validation/test splitting
+- Leakage prevention
+- Data quality validation
+
+### Pipeline
+
+```
+Engineered Features (long format)
+        ↓
+ML Dataset Service
+        ↓
+Pivot to wide format
+        ↓
+Identify features and targets
+        ↓
+Validate data quality
+        ↓
+Check for leakage
+        ↓
+Chronological train/validation/test split
+        ↓
+ML-ready datasets
+```
+
+### Wide-Format Conversion
+
+The `engineered_features` table stores data in long format (one row per feature per date). Phase 8 pivots this into a wide-format DataFrame where:
+- Each row is one trading date
+- Each column is one feature or target
+- Targets are explicitly separated from features
+
+### Feature/Target Separation
+
+**Features (X):**
+- Market features: `daily_return`, `log_return`, `volatility_5d`, `return_lag_1`, `return_lag_3`, `return_lag_5`
+- Trends features: `{term}_trend`, `{term}_trend_lag_1`, `{term}_trend_lag_3`, `{term}_trend_lag_7`, `{term}_trend_change`
+
+**Targets (y):**
+- `next_day_return` — regression target
+- `next_day_direction` — classification target (0 or 1)
+
+Targets are never included in the feature matrix.
+
+### Chronological Splitting
+
+Financial time-series must not be randomly shuffled. Phase 8 uses a chronological split:
+
+```
+Training   → earliest observations (default 70%)
+Validation → middle observations (default 15%)
+Test       → latest observations (default 15%)
+```
+
+This ensures that:
+- Models are trained on historical data
+- Validation is used for model-development decisions
+- Test data remains completely unseen until final evaluation
+
+Split ratios are configurable but must sum to 1.0.
+
+### Leakage Prevention
+
+Before splitting, Phase 8 explicitly verifies that:
+- Target columns (`next_day_return`, `next_day_direction`) are not present in the feature matrix
+- No future-looking feature names are included
+- Train, validation, and test sets do not overlap chronologically
+
+### Missing Values
+
+Rows with missing target values (`next_day_return` or `next_day_direction`) are removed before splitting. This handles the warm-up period where insufficient history exists for lagged features. Missing values are not silently replaced with zero.
+
+### Data Quality Checks
+
+Before returning the ML dataset, Phase 8 validates:
+- No duplicate dates
+- No infinite values in numeric columns
+- Classification target contains only 0 or 1
+- Regression target is numeric and finite
+- All required feature columns are present
+- Chronological ordering is preserved
+
+### API
+
+```http
+POST /api/ml-dataset/prepare
+Content-Type: application/json
+
+{
+  "symbol": "^NSEI",
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30",
+  "train_ratio": 0.70,
+  "validation_ratio": 0.15,
+  "test_ratio": 0.15
+}
+```
+
+Response includes metadata about the prepared dataset, including row counts, feature names, date ranges, and leakage validation.
+
+### Current Dataset
+
+For the current real dataset (`^NSEI`, 2024-01-01 to 2024-06-30):
+- Original rows: 114
+- Features: 31
+- Train: 79 rows (2024-01-08 to 2024-05-07)
+- Validation: 17 rows (2024-05-08 to 2024-05-31)
+- Test: 18 rows (2024-06-03 to 2024-06-27)
+
+### Limitations
+
+- The current dataset contains only 114 observations (approximately six months).
+- This is a relatively small sample for financial machine learning.
+- Phase 8 does not scale or select features; that is left to Phase 9.
+- The split ratios are a design choice for this college project, not a claim of universal optimality.
+
+---
+
 ## ML Methodology
 
 ### Feature Engineering
