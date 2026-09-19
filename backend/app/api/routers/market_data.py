@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from app.core.database import get_db
 from app.services.market_data_service import MarketDataService
-from app.schemas.market_data import MarketDataResponse
+from app.schemas.market_data import MarketDataResponse, MarketDataIngestRequest, MarketDataIngestResponse
+from app.pipeline.market_pipeline import MarketIngestionService
 
 router = APIRouter()
 
@@ -23,3 +24,23 @@ async def get_market_data(
 async def get_recent_market_data(symbol: str, limit: int = 100, db: AsyncSession = Depends(get_db)):
     service = MarketDataService(db)
     return await service.get_recent(symbol, limit)
+
+
+@router.post("/ingest", response_model=MarketDataIngestResponse)
+async def ingest_market_data(request: MarketDataIngestRequest, db: AsyncSession = Depends(get_db)):
+    service = MarketIngestionService(db)
+    try:
+        result = await service.ingest(
+            symbol=request.symbol,
+            start_date=request.start_date.isoformat(),
+            end_date=request.end_date.isoformat(),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Market data ingestion failed: {exc}") from exc
+
+    return MarketDataIngestResponse(
+        symbol=result["symbol"],
+        total_records=result["total_records"],
+        inserted=result["inserted"],
+        date_range=result["date_range"],
+    )

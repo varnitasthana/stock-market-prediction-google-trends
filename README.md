@@ -409,7 +409,9 @@ FastAPI auto-generates interactive API documentation:
 | POST | `/api/alignment/` | Align market and trends data |
 | GET | `/api/market-data/` | Get market data |
 | GET | `/api/market-data/recent/{symbol}` | Get recent market data |
+| POST | `/api/market-data/ingest` | Ingest market data from yfinance |
 | GET | `/api/features/` | Get engineered features |
+| POST | `/api/features/generate` | Generate and persist engineered features |
 | GET | `/api/models/` | List model runs |
 | POST | `/api/models/` | Create model run |
 | GET | `/api/predictions/` | Get predictions |
@@ -546,6 +548,172 @@ Content-Type: application/json
 ```
 
 Response includes aligned rows and a data quality report.
+
+---
+
+## Feature Engineering
+
+### Overview
+
+Phase 6 transforms cleaned and temporally aligned market + Google Trends data into meaningful features for machine learning.
+
+The feature-engineering process is deterministic and uses only information available at or before each prediction date.
+
+### Pipeline
+
+```
+API / Pipeline
+      ↓
+Fetch cleaned/aligned data
+      ↓
+Feature Engineering Service
+      ↓
+Calculate market features
+      ↓
+Calculate Trends features
+      ↓
+Generate targets
+      ↓
+Remove insufficient rows
+      ↓
+Validate ML-ready dataset
+      ↓
+Persist engineered features
+```
+
+### Feature Storage
+
+Features are stored in the `engineered_features` table with a unique constraint on `(symbol, date, feature_name)`. This allows:
+- Idempotent feature generation (re-running does not create duplicates)
+- Efficient querying by symbol and date range
+- Dynamic feature names per search term
+
+### Market Features
+
+| Feature | Formula | Description |
+|---------|---------|-------------|
+| `daily_return` | `(close_t / close_{t-1}) - 1` | Percentage change from previous trading day |
+| `log_return` | `ln(close_t / close_{t-1})` | Log returns for statistical modeling |
+| `volatility_5d` | 5-day rolling std of returns | Historical volatility measure |
+| `return_lag_1` | `daily_return_{t-1}` | Previous day's return |
+| `return_lag_3` | `daily_return_{t-3}` | 3-day lagged return |
+| `return_lag_5` | `daily_return_{t-5}` | 5-day lagged return |
+
+### Google Trends Features
+
+For each active search term stored in the database, dynamic features are generated using a sanitized term name.
+
+Example: search term `"interest rates"` becomes prefix `interest_rates`.
+
+| Feature | Description |
+|---------|-------------|
+| `{term}_trend` | Current interest score aligned to market date |
+| `{term}_trend_lag_1` | Previous day's interest score |
+| `{term}_trend_lag_3` | 3-day lagged interest score |
+| `{term}_trend_lag_7` | 7-day lagged interest score |
+| `{term}_trend_change` | Day-over-day change in interest score |
+
+### Target Variables
+
+Targets use future information by definition and are treated as **labels**, never as input features.
+
+| Target | Formula | Description |
+|--------|---------|-------------|
+| `next_day_return` | `daily_return_{t+1}` | Return for the next trading day |
+| `next_day_direction` | `1 if next_day_return > 0 else 0` | Binary direction of next-day movement |
+
+### Feature vs Target Separation
+
+```
+Features available at date t:
+  - today's Trends score
+  - past returns (lag 1, 3, 5)
+  - past volatility
+  - past Trends lags and changes
+
+Target generated from date t+1:
+  - next_day_return
+  - next_day_direction
+```
+
+### Leakage Prevention
+
+- All rolling statistics use backward-looking windows only.
+- Lag features use `.shift(1)`, `.shift(3)`, `.shift(5)`, `.shift(7)` — never centered windows.
+- Targets use `.shift(-1)` and are only used as labels.
+- Date-based alignment prevents row-position matching errors.
+- A dedicated leakage test verifies that modifying future values does not change features for earlier dates.
+
+### Missing Values
+
+Initial rows with insufficient history are removed from the final ML-ready dataset:
+- `daily_return` is NaN for the first row
+- `volatility_5d` requires 5 prior return observations
+- `return_lag_5` requires 5 prior returns
+- `{term}_trend_lag_7` requires 7 prior trend observations
+
+Rows with any NaN in required columns (`daily_return`, `volatility_5d`, `next_day_return`) are dropped. This strategy is appropriate because:
+- Models cannot train on incomplete feature vectors
+- The removed rows represent the warm-up period of the time series
+- The strategy is deterministic and documented
+
+### Multiple Search Terms
+
+Search terms are dynamically read from the `search_terms` table. Each active term becomes a set of features with a sanitized name:
+
+| Search Term | Feature Prefix |
+|-------------|---------------|
+| `recession` | `recession` |
+| `inflation` | `inflation` |
+| `interest rates` | `interest_rates` |
+| `stock market` | `stock_market` |
+| `unemployment` | `unemployment` |
+
+No hardcoded term list is required.
+
+### Validation
+
+The generated feature dataset is validated for:
+- Required columns exist
+- Numeric features contain no NaN or infinite values
+- No unexpected duplicate `(symbol, date)` records
+- Target values are finite
+- Features use only past/current information
+
+### API
+
+```http
+POST /api/features/generate
+Content-Type: application/json
+
+{
+  "symbol": "^NSEI",
+  "search_term_ids": [3, 6, 7, 8, 9],
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30"
+}
+```
+
+Response:
+```json
+{
+  "symbol": "^NSEI",
+  "rows_generated": 114,
+  "rows_persisted": 3751,
+  "features_generated": [
+    "daily_return",
+    "inflation_trend",
+    "next_day_return",
+    "next_day_direction",
+    "volatility_5d",
+    ...
+  ]
+}
+```
+
+### Idempotency
+
+Re-running feature generation for the same symbol, date range, and search terms does not create duplicate rows. The `ON CONFLICT DO NOTHING` clause on `(symbol, date, feature_name)` ensures safe re-execution.
 
 ---
 
