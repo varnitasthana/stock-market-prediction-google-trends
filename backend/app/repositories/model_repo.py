@@ -29,3 +29,12 @@ class ModelRepository:
         await self.db.flush()
         await self.db.refresh(model_run)
         return model_run
+
+    async def update_artifact_path(self, model_run_id: int, artifact_path: str):
+        model_run = await self.get_by_id(model_run_id)
+        if not model_run:
+            return None
+        model_run.artifact_path = artifact_path
+        await self.db.flush()
+        await self.db.refresh(model_run)
+        return model_run

@@ -1192,6 +1192,82 @@ Evaluated on Symbol: `^NSEI`, Date range: `2024-01-01` → `2024-06-30`
 
 ---
 
+## Phase 11 — Prediction API
+
+Phase 11 adds a prediction API that loads a previously trained model and generates predictions from historical feature data.
+
+### Model persistence
+
+Trained models are persisted using `joblib` under:
+
+```
+backend/artifacts/models/model_run_<id>.joblib
+```
+
+The database `model_runs` table stores the artifact path in the `artifact_path` column. The `.gitignore` excludes the `artifacts/` directory, so model binaries are not committed to Git.
+
+### Prediction flow
+
+1. Client sends `POST /api/models/predict` with `model_run_id`, `symbol`, and `prediction_date`
+2. API loads the `model_runs` record
+3. Verifies symbol matches the trained model
+4. Loads the persisted joblib artifact
+5. Retrieves the engineered feature row for the requested date
+6. Constructs the feature vector using the exact feature order from training
+7. Runs inference without retraining or refitting preprocessing
+8. Returns the prediction
+
+### Classification prediction
+
+For `logistic_regression` and `random_forest_classifier`, the API returns:
+
+- `predicted_class`: `0` or `1`
+- `predicted_direction`: `Down` or `Up`
+- `probability_down` / `probability_up`: class probabilities when available
+
+### Regression prediction
+
+For `linear_regression` and `random_forest_regressor`, the API returns:
+
+- `predicted_return`: predicted next-day return
+
+### Prediction API
+
+```http
+POST /api/models/predict
+```
+
+Example request:
+
+```json
+{
+  "model_run_id": 1,
+  "symbol": "^NSEI",
+  "prediction_date": "2024-06-27"
+}
+```
+
+### Feature-date semantics
+
+The feature row on date `D` contains information available up to date `D`. The model predicts `next_day_return` or `next_day_direction` for the following market observation. The API does not expose the actual target as the prediction.
+
+### Leakage protection
+
+- Prediction never retrains the model
+- Prediction never refits preprocessing/scalers
+- Prediction uses only the requested date's feature row
+- Future information is never used
+- The test set is never modified
+
+### Limitations
+
+- Predictions are available only for dates with existing engineered features
+- This is a historical prediction API, not a live trading system
+- Future prediction would require ingesting current market and Google Trends data first
+- No profitability or investment recommendations are provided
+
+---
+
 ## Future Improvements
 
 - SHAP explainability for model predictions

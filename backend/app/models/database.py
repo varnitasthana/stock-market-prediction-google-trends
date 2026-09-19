@@ -96,6 +96,7 @@ class ModelRun(Base):
     parameters = Column(String, nullable=True)
     random_state = Column(Integer, nullable=True)
     feature_count = Column(Integer, nullable=True)
+    artifact_path = Column(String(500), nullable=True)
     metrics = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
