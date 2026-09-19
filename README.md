@@ -1002,6 +1002,91 @@ target_return = next_day_return
 
 ---
 
+## Phase 9 — Model Training
+
+Phase 9 builds on the leakage-safe ML dataset prepared in Phase 8 and trains baseline machine-learning models.
+
+### What it does
+
+It takes the chronological train/validation/test splits from Phase 8 and fits four baseline models:
+
+**Classification**
+
+Predicts `next_day_direction` using:
+
+- Logistic Regression
+- Random Forest Classifier
+
+**Regression**
+
+Predicts `next_day_return` using:
+
+- Linear Regression
+- Random Forest Regressor
+
+### Why model-specific preprocessing
+
+Logistic Regression and Linear Regression benefit from standardized features, so they are wrapped in a `StandardScaler` pipeline fitted **only on the training data**.
+
+Random Forest models are tree-based and do not require feature scaling.
+
+### Why the test set remains untouched
+
+The test set is reserved for final evaluation in Phase 10. Phase 9 only verifies that training completes successfully.
+
+### Current limitation
+
+The dataset has only 114 observations. Results must be interpreted cautiously.
+
+### Training API
+
+```http
+POST /api/models/train
+```
+
+Example request:
+
+```json
+{
+  "symbol": "^NSEI",
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30",
+  "task": "classification",
+  "model_name": "logistic_regression"
+}
+```
+
+Supported `task` values: `classification`, `regression`
+
+Supported `model_name` values:
+
+- `logistic_regression`
+- `random_forest_classifier`
+- `linear_regression`
+- `random_forest_regressor`
+
+### Real-data training results
+
+Trained on Symbol: `^NSEI`, Date range: `2024-01-01` → `2024-06-30`
+
+| Model | Task | Target | Training Rows | Validation Rows | Test Rows | Features |
+|-------|------|--------|--------------|-----------------|-----------|----------|
+| Logistic Regression | classification | next_day_direction | 77 | 17 | 18 | 31 |
+| Random Forest Classifier | classification | next_day_direction | 77 | 17 | 18 | 31 |
+| Linear Regression | regression | next_day_return | 77 | 17 | 18 | 31 |
+| Random Forest Regressor | regression | next_day_return | 77 | 17 | 18 | 31 |
+
+All four models train successfully. No performance conclusions are made in Phase 9.
+
+### Leakage prevention
+
+- Target column is excluded from features
+- Chronological Phase 8 splits are reused
+- Preprocessing scaler is fitted only on training data
+- Test set remains unseen
+
+---
+
 ## Future Improvements
 
 - SHAP explainability for model predictions

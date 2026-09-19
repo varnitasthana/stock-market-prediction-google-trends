@@ -242,3 +242,99 @@ class MLDatasetService:
         if np.isinf(y_regression).any():
             issues.append("Regression target contains infinite values")
         return {"valid": len(issues) == 0, "issues": issues}
+
+    async def get_splits(self, symbol: str, start_date: date, end_date: date, train_ratio: float = 0.70, validation_ratio: float = 0.15, test_ratio: float = 0.15) -> Dict[str, Any]:
+        rows = await self.features_repo.get_by_symbol_and_date_range(symbol, start_date, end_date)
+        if not rows:
+            raise MLDatasetError(f"No engineered features found for {symbol} in range {start_date} to {end_date}")
+
+        wide_df = self._pivot_to_wide(rows)
+        if wide_df.empty:
+            raise MLDatasetError("Engineered features are empty after pivoting")
+
+        quality = self._validate_and_clean(wide_df)
+        wide_df = quality["df"]
+
+        feature_columns = self._identify_feature_columns(wide_df.columns.tolist())
+        target_columns = self._identify_target_columns(wide_df.columns.tolist())
+
+        missing_features = set(feature_columns) - set(wide_df.columns)
+        missing_targets = set(target_columns) - set(wide_df.columns)
+        if missing_features:
+            raise MLDatasetError(f"Missing feature columns: {missing_features}")
+        if missing_targets:
+            raise MLDatasetError(f"Missing target columns: {missing_targets}")
+
+        leakage_check = self._check_leakage(wide_df.columns.tolist(), feature_columns, target_columns)
+        if not leakage_check["safe"]:
+            raise MLDatasetError(f"Leakage detected: {leakage_check['issues']}")
+
+        splits = self._chronological_split(wide_df, train_ratio, validation_ratio, test_ratio)
+
+        X_train = wide_df.loc[splits["train_indices"], feature_columns].reset_index(drop=True)
+        y_train_classification = wide_df.loc[splits["train_indices"], "next_day_direction"].reset_index(drop=True)
+        y_train_regression = wide_df.loc[splits["train_indices"], "next_day_return"].reset_index(drop=True)
+
+        X_validation = wide_df.loc[splits["validation_indices"], feature_columns].reset_index(drop=True)
+        y_validation_classification = wide_df.loc[splits["validation_indices"], "next_day_direction"].reset_index(drop=True)
+        y_validation_regression = wide_df.loc[splits["validation_indices"], "next_day_return"].reset_index(drop=True)
+
+        X_test = wide_df.loc[splits["test_indices"], feature_columns].reset_index(drop=True)
+        y_test_classification = wide_df.loc[splits["test_indices"], "next_day_direction"].reset_index(drop=True)
+        y_test_regression = wide_df.loc[splits["test_indices"], "next_day_return"].reset_index(drop=True)
+
+        train_mask = X_train.notna().all(axis=1)
+        X_train = X_train.loc[train_mask].reset_index(drop=True)
+        y_train_classification = y_train_classification.loc[train_mask].reset_index(drop=True)
+        y_train_regression = y_train_regression.loc[train_mask].reset_index(drop=True)
+
+        val_mask = X_validation.notna().all(axis=1)
+        X_validation = X_validation.loc[val_mask].reset_index(drop=True)
+        y_validation_classification = y_validation_classification.loc[val_mask].reset_index(drop=True)
+        y_validation_regression = y_validation_regression.loc[val_mask].reset_index(drop=True)
+
+        test_mask = X_test.notna().all(axis=1)
+        X_test = X_test.loc[test_mask].reset_index(drop=True)
+        y_test_classification = y_test_classification.loc[test_mask].reset_index(drop=True)
+        y_test_regression = y_test_regression.loc[test_mask].reset_index(drop=True)
+
+        if len(X_train) == 0:
+            raise MLDatasetError("No training rows remain after dropping NaN features")
+        if len(X_validation) == 0:
+            raise MLDatasetError("No validation rows remain after dropping NaN features")
+        if len(X_test) == 0:
+            raise MLDatasetError("No test rows remain after dropping NaN features")
+
+        train_dates = wide_df.loc[splits["train_indices"], "date"]
+        validation_dates = wide_df.loc[splits["validation_indices"], "date"]
+        test_dates = wide_df.loc[splits["test_indices"], "date"]
+
+        train_quality = self._validate_targets(y_train_classification, y_train_regression)
+        validation_quality = self._validate_targets(y_validation_classification, y_validation_regression)
+        test_quality = self._validate_targets(y_test_classification, y_test_regression)
+
+        all_quality_issues = train_quality["issues"] + validation_quality["issues"] + test_quality["issues"]
+        if all_quality_issues:
+            raise MLDatasetError(f"Target validation issues: {all_quality_issues}")
+
+        return {
+            "feature_names": feature_columns,
+            "X_train": X_train,
+            "y_train_classification": y_train_classification,
+            "y_train_regression": y_train_regression,
+            "X_validation": X_validation,
+            "y_validation_classification": y_validation_classification,
+            "y_validation_regression": y_validation_regression,
+            "X_test": X_test,
+            "y_test_classification": y_test_classification,
+            "y_test_regression": y_test_regression,
+            "train_start_date": train_dates.iloc[0].isoformat() if len(train_dates) > 0 else None,
+            "train_end_date": train_dates.iloc[-1].isoformat() if len(train_dates) > 0 else None,
+            "validation_start_date": validation_dates.iloc[0].isoformat() if len(validation_dates) > 0 else None,
+            "validation_end_date": validation_dates.iloc[-1].isoformat() if len(validation_dates) > 0 else None,
+            "test_start_date": test_dates.iloc[0].isoformat() if len(test_dates) > 0 else None,
+            "test_end_date": test_dates.iloc[-1].isoformat() if len(test_dates) > 0 else None,
+            "train_rows": int(len(X_train)),
+            "validation_rows": int(len(X_validation)),
+            "test_rows": int(len(X_test)),
+        }

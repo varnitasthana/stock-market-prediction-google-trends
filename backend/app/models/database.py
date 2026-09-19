@@ -75,11 +75,18 @@ class ModelRun(Base):
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String(100), nullable=False)
     symbol = Column(String(50), nullable=False)
+    task_type = Column(String(50), nullable=False, default="classification")
+    target_name = Column(String(100), nullable=False)
     training_start = Column(Date, nullable=False)
     training_end = Column(Date, nullable=False)
     evaluation_start = Column(Date, nullable=False)
     evaluation_end = Column(Date, nullable=False)
-    metrics = Column(String)  # JSON serialized metrics
+    test_start_date = Column(Date, nullable=True)
+    test_end_date = Column(Date, nullable=True)
+    parameters = Column(String, nullable=True)
+    random_state = Column(Integer, nullable=True)
+    feature_count = Column(Integer, nullable=True)
+    metrics = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
