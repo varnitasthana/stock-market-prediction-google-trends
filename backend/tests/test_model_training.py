@@ -18,7 +18,7 @@ def _build_training_rows(n=30, seed=42):
     dates = [date(2024, 1, 1) + __import__("datetime").timedelta(days=i) for i in range(n)]
     base = 100.0
     closes = []
-    for i in range(n):
+    for _ in range(n):
         change = np.random.randn() * 3
         base = base + change
         closes.append(base)
@@ -39,7 +39,7 @@ async def _ingest_symbol(db_session, symbol, dates, closes, search_term_ids=None
     market_repo = MarketDataRepository(db_session)
     await market_repo.bulk_insert([
         {"symbol": symbol, "date": d, "close": c, "volume": 1000, "open": c, "high": c, "low": c, "adj_close": c}
-        for d, c in zip(dates, closes)
+        for d, c in zip(dates, closes, strict=True)
     ])
 
     trends_repo = TrendsRepository(db_session)

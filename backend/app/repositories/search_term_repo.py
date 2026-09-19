@@ -1,5 +1,6 @@
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, delete, update
+
 from app.models.database import SearchTerm
 from app.schemas.search_terms import SearchTermCreate, SearchTermUpdate
 
@@ -11,7 +12,7 @@ class SearchTermRepository:
     async def get_all(self, active_only: bool = True):
         stmt = select(SearchTerm)
         if active_only:
-            stmt = stmt.where(SearchTerm.active == True)
+            stmt = stmt.where(SearchTerm.active)
         result = await self.db.execute(stmt)
         return result.scalars().all()
 

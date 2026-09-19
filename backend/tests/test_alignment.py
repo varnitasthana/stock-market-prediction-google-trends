@@ -1,15 +1,11 @@
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient
-import pandas as pd
 from datetime import date
 
-from app.main import app
-from app.services.alignment_service import AlignmentService
-from app.schemas.alignment import AlignmentRequest, DataQualityReport
-from app.utils.validators import validate_market_data, validate_trends_data
+import pandas as pd
+import pytest
+from httpx import AsyncClient
 
-from tests.conftest import client, db_session
+from app.services.alignment_service import AlignmentService
+from app.utils.validators import validate_market_data, validate_trends_data
 
 
 def test_validate_market_data_valid():
@@ -90,9 +86,7 @@ async def test_alignment_partial_overlap(client: AsyncClient, db_session):
     term = await client.get("/api/search-terms/?active_only=false")
     term_id = term.json()[0]["id"]
 
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.services.alignment_service import AlignmentService
 
     market_repo = MarketDataRepository(db_session)
     await market_repo.bulk_insert([
@@ -130,7 +124,6 @@ async def test_alignment_empty_market(client: AsyncClient, db_session):
     term_id = term.json()[0]["id"]
 
     from app.repositories.trends_repo import TrendsRepository
-    from app.services.alignment_service import AlignmentService
 
     trends_repo = TrendsRepository(db_session)
     await trends_repo.bulk_insert([

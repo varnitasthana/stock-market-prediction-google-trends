@@ -1,12 +1,18 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
+
 from app.core.database import get_db
-from app.services.model_service import ModelService
-from app.services.training_service import TrainingService, TrainingError
+from app.ml.model_trainer import (
+    SUPPORTED_CLASSIFICATION_MODELS,
+    SUPPORTED_REGRESSION_MODELS,
+)
+from app.schemas.evaluation import ClassificationEvaluationResponse, RegressionEvaluationResponse, EvaluationRequest
 from app.schemas.models import ModelRunCreate, ModelRunResponse
-from app.schemas.training import ModelTrainRequest, ModelTrainResponse, SUPPORTED_TASKS
-from app.ml.model_trainer import SUPPORTED_CLASSIFICATION_MODELS, SUPPORTED_REGRESSION_MODELS
+from app.schemas.training import SUPPORTED_TASKS, ModelTrainRequest, ModelTrainResponse
+from app.services.evaluation_service import EvaluationError, EvaluationService
+from app.services.model_service import ModelService
+from app.services.training_service import TrainingError, TrainingService
 
 router = APIRouter()
 
@@ -63,3 +69,18 @@ async def train_model(request: ModelTrainRequest, db: AsyncSession = Depends(get
         raise HTTPException(status_code=500, detail=f"Model training failed: {exc}") from exc
 
     return ModelTrainResponse(**result)
+
+
+@router.post("/evaluate")
+async def evaluate_model(request: EvaluationRequest, db: AsyncSession = Depends(get_db)):
+    service = EvaluationService(db, model_run_id=request.model_run_id, split=request.evaluation_split)
+    try:
+        result = await service.evaluate()
+    except EvaluationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {exc}") from exc
+
+    if result["task_type"] == "classification":
+        return ClassificationEvaluationResponse(**result)
+    return RegressionEvaluationResponse(**result)

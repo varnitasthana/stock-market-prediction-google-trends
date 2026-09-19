@@ -1,6 +1,14 @@
 from fastapi import APIRouter
 
-from app.api.routers import search_terms, market_data, trends, features, models, predictions, dashboard
+from app.api.routers import (
+    dashboard,
+    features,
+    market_data,
+    models,
+    predictions,
+    search_terms,
+    trends,
+)
 
 router = APIRouter()
 

@@ -1,17 +1,11 @@
-import pytest
-import pytest_asyncio
-import pandas as pd
-import numpy as np
 from datetime import date
-from decimal import Decimal
 
-from app.services.statistical_analysis_service import StatisticalAnalysisService, StatisticalAnalysisError
-from app.schemas.statistics import StatisticsAnalyzeRequest
-from app.repositories.features_repo import FeaturesRepository
-from app.schemas.features import FeatureGenerateResponse
-from app.services.feature_engineering_service import FeatureEngineer
+import pytest
 
-from tests.conftest import client, db_session
+from app.services.statistical_analysis_service import (
+    StatisticalAnalysisError,
+    StatisticalAnalysisService,
+)
 
 
 def _make_feature_row(symbol, row_date, feature_name, feature_value):
@@ -20,8 +14,8 @@ def _make_feature_row(symbol, row_date, feature_name, feature_value):
 
 @pytest.mark.asyncio
 async def test_descriptive_statistics(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -77,8 +71,8 @@ async def test_descriptive_statistics(client, db_session):
 
 @pytest.mark.asyncio
 async def test_correlation_values_within_range(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -131,8 +125,8 @@ async def test_correlation_values_within_range(client, db_session):
 
 @pytest.mark.asyncio
 async def test_multiple_search_terms_analysis(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -189,7 +183,6 @@ async def test_multiple_search_terms_analysis(client, db_session):
     result = await service.analyze("MSTAT", date(2024, 1, 1), date(2024, 1, 11))
 
     assert result["sample_size"] == 3
-    trend_features = [c for c in result.get("descriptive_statistics", []) if "trend" in c.get("feature", "")]
 
     assert len(result["correlations"]) > 0
     features_in_corr = {c["feature"] for c in result["correlations"]}
@@ -202,8 +195,8 @@ async def test_multiple_search_terms_analysis(client, db_session):
 
 @pytest.mark.asyncio
 async def test_lag_analysis(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -260,8 +253,8 @@ async def test_lag_analysis(client, db_session):
 
 @pytest.mark.asyncio
 async def test_direction_analysis(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 
@@ -326,8 +319,8 @@ async def test_statistics_empty_dataset(client, db_session):
 
 @pytest.mark.asyncio
 async def test_statistics_api_success(client, db_session):
-    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.market_data_repo import MarketDataRepository
+    from app.repositories.search_term_repo import SearchTermRepository
     from app.repositories.trends_repo import TrendsRepository
     from app.schemas.search_terms import SearchTermCreate
 

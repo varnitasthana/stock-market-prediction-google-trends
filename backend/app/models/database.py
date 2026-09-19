@@ -1,8 +1,18 @@
 from sqlalchemy import (
-    Column, Integer, String, Date, Numeric, BigInteger, Boolean,
-    TIMESTAMP, ForeignKey, UniqueConstraint, Index
+    TIMESTAMP,
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
 )
 from sqlalchemy.sql import func
+
 from app.core.database import Base
 
 

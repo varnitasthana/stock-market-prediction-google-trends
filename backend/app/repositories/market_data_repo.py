@@ -1,7 +1,7 @@
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, delete
+
 from app.models.database import MarketData
-from app.schemas.market_data import MarketDataBase
 
 
 class MarketDataRepository:

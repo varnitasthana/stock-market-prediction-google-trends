@@ -1,10 +1,16 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
+
 from app.core.database import get_db
-from app.services.market_data_service import MarketDataService
-from app.schemas.market_data import MarketDataResponse, MarketDataIngestRequest, MarketDataIngestResponse
 from app.pipeline.market_pipeline import MarketIngestionService
+from app.schemas.market_data import (
+    MarketDataIngestRequest,
+    MarketDataIngestResponse,
+    MarketDataResponse,
+)
+from app.services.market_data_service import MarketDataService
 
 router = APIRouter()
 

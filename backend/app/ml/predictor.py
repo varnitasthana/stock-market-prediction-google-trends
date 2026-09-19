@@ -1,22 +1,23 @@
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
+
 import pandas as pd
-import numpy as np
-from app.ml.model_trainer import ModelTrainer, Evaluator
+
+from app.ml.model_trainer import ModelTrainer
 
 logger = logging.getLogger(__name__)
 
 
 class Predictor:
     def __init__(self):
-        self.trainer: Optional[ModelTrainer] = None
+        self.trainer: ModelTrainer | None = None
         self.feature_columns: list[str] = []
 
     def load_model(self, trainer: ModelTrainer):
         self.trainer = trainer
         self.feature_columns = trainer.feature_columns
 
-    def predict(self, features: pd.DataFrame) -> Dict[str, Any]:
+    def predict(self, features: pd.DataFrame) -> dict[str, Any]:
         if self.trainer is None:
             raise RuntimeError("Model not loaded")
         X = features[self.feature_columns].fillna(0)

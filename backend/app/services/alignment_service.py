@@ -1,11 +1,12 @@
 import logging
 from datetime import date
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 import pandas as pd
 
 from app.repositories.market_data_repo import MarketDataRepository
-from app.repositories.trends_repo import TrendsRepository
 from app.repositories.search_term_repo import SearchTermRepository
+from app.repositories.trends_repo import TrendsRepository
 from app.schemas.alignment import AlignedRow, DataQualityReport
 from app.utils.validators import validate_market_data, validate_trends_data
 
@@ -18,7 +19,7 @@ class AlignmentService:
         self.trends_repo = TrendsRepository(db)
         self.term_repo = SearchTermRepository(db)
 
-    async def align(self, symbol: str, search_term_id: int, start_date: date, end_date: date) -> Dict[str, Any]:
+    async def align(self, symbol: str, search_term_id: int, start_date: date, end_date: date) -> dict[str, Any]:
         market_rows = await self.market_repo.get_by_symbol_and_date_range(symbol, start_date, end_date)
         trends_rows = await self.trends_repo.get_by_term_and_date_range(search_term_id, start_date, end_date)
 
@@ -41,7 +42,7 @@ class AlignmentService:
         market_indexed = {row["date"]: row for row in market_df.to_dict("records")}
         trends_indexed = {row["date"]: row for row in trends_df.to_dict("records")}
 
-        aligned_rows: List[AlignedRow] = []
+        aligned_rows: list[AlignedRow] = []
         for d in overlapping_dates:
             m = market_indexed[d]
             t = trends_indexed[d]
@@ -83,7 +84,7 @@ class AlignmentService:
         return {"rows": aligned_rows, "quality": quality}
 
     @staticmethod
-    def _market_to_df(rows: List[Any]) -> pd.DataFrame:
+    def _market_to_df(rows: list[Any]) -> pd.DataFrame:
         if not rows:
             return pd.DataFrame(columns=["date", "open", "high", "low", "close", "adj_close", "volume"])
         data = []
@@ -100,7 +101,7 @@ class AlignmentService:
         return pd.DataFrame(data)
 
     @staticmethod
-    def _trends_to_df(rows: List[Any]) -> pd.DataFrame:
+    def _trends_to_df(rows: list[Any]) -> pd.DataFrame:
         if not rows:
             return pd.DataFrame(columns=["date", "interest_score"])
         data = []

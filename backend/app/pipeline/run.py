@@ -1,12 +1,12 @@
 import asyncio
 import logging
-from datetime import date
-from app.core.database import init_db, get_db
+
 from app.core.config import get_settings
+from app.core.database import get_db, init_db
+from app.pipeline.feature_pipeline import FeaturePipeline
 from app.pipeline.market_pipeline import MarketIngestionService
 from app.pipeline.trends_pipeline import TrendsIngestionService
 from app.pipeline.trends_provider import PytrendsProvider
-from app.pipeline.feature_pipeline import FeaturePipeline
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

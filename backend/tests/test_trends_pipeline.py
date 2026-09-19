@@ -1,17 +1,11 @@
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient
+
 import pandas as pd
-from datetime import date
+import pytest
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.main import app
-from app.pipeline.trends_provider import TrendsDataProvider, PytrendsProvider
-from app.pipeline.trends_pipeline import TrendsIngestionService, TrendsError
-from app.schemas.trends import TrendsIngestRequest
-from app.core.database import get_db
-
-from tests.conftest import client, db_session
+from app.pipeline.trends_pipeline import TrendsIngestionService
+from app.pipeline.trends_provider import PytrendsProvider, TrendsDataProvider
 
 
 class FakeProvider(TrendsDataProvider):

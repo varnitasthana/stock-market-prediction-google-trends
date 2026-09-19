@@ -1,16 +1,14 @@
-import pytest
-import pytest_asyncio
-import pandas as pd
-import numpy as np
 from datetime import date
-from decimal import Decimal
 
-from app.services.feature_engineering_service import FeatureEngineer, FeatureEngineeringError
-from app.schemas.features import FeatureGenerateRequest, FeatureGenerateResponse
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.schemas.search_terms import SearchTermCreate
+from app.services.feature_engineering_service import (
+    FeatureEngineer,
+)
 from app.utils.validators import validate_market_data
-
-from tests.conftest import client, db_session
 
 
 def _build_market_df(prices: list[tuple[date, float]]) -> pd.DataFrame:
@@ -74,8 +72,8 @@ def test_merge_trends_to_market():
 @pytest.mark.asyncio
 async def test_generate_features_end_to_end(client, db_session):
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.repositories.trends_repo import TrendsRepository
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.repositories.trends_repo import TrendsRepository
 
     term_repo = SearchTermRepository(db_session)
     term = await term_repo.create(SearchTermCreate(term="recession", category="macro", active=True))
@@ -127,8 +125,8 @@ async def test_generate_features_end_to_end(client, db_session):
 @pytest.mark.asyncio
 async def test_generate_features_api(client, db_session):
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.repositories.trends_repo import TrendsRepository
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.repositories.trends_repo import TrendsRepository
 
     term_repo = SearchTermRepository(db_session)
     term = await term_repo.create(SearchTermCreate(term="inflation", category="macro", active=True))
@@ -186,8 +184,8 @@ async def test_generate_features_no_market_data(client, db_session):
 @pytest.mark.asyncio
 async def test_generate_features_idempotent(client, db_session):
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.repositories.trends_repo import TrendsRepository
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.repositories.trends_repo import TrendsRepository
 
     term_repo = SearchTermRepository(db_session)
     term = await term_repo.create(SearchTermCreate(term="idempotent", category="test", active=True))
@@ -245,8 +243,8 @@ async def test_generate_features_idempotent(client, db_session):
 @pytest.mark.asyncio
 async def test_generate_features_multiple_terms(client, db_session):
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.repositories.trends_repo import TrendsRepository
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.repositories.trends_repo import TrendsRepository
 
     term_repo = SearchTermRepository(db_session)
     term_a = await term_repo.create(SearchTermCreate(term="recession", category="macro", active=True))
@@ -306,8 +304,8 @@ async def test_generate_features_multiple_terms(client, db_session):
 @pytest.mark.asyncio
 async def test_generate_features_no_nan_inf(client, db_session):
     from app.repositories.market_data_repo import MarketDataRepository
-    from app.repositories.trends_repo import TrendsRepository
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.repositories.trends_repo import TrendsRepository
 
     term_repo = SearchTermRepository(db_session)
     term = await term_repo.create(SearchTermCreate(term="clean", category="test", active=True))

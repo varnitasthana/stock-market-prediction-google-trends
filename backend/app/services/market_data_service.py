@@ -1,7 +1,6 @@
 from datetime import date
-from typing import List
+
 from app.repositories.market_data_repo import MarketDataRepository
-from app.schemas.market_data import MarketDataResponse
 
 
 class MarketDataService:

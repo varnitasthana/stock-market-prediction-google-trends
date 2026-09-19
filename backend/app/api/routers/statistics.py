@@ -1,10 +1,13 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
-from typing import List
+
 from app.core.database import get_db
-from app.services.statistical_analysis_service import StatisticalAnalysisService, StatisticalAnalysisError
 from app.schemas.statistics import StatisticsAnalyzeRequest, StatisticsAnalyzeResponse
+from app.services.statistical_analysis_service import (
+    StatisticalAnalysisError,
+    StatisticalAnalysisService,
+)
 
 router = APIRouter()
 

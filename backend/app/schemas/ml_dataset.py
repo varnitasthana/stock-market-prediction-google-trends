@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional, List
+
+from pydantic import BaseModel, Field
 
 
 class MLDatasetPrepareRequest(BaseModel):
@@ -20,22 +20,22 @@ class MLDatasetPrepareResponse(BaseModel):
     rows_after_cleaning: int
     rows_removed: int
     feature_count: int
-    feature_names: List[str]
-    target_names: List[str]
+    feature_names: list[str]
+    target_names: list[str]
     train_rows: int
     validation_rows: int
     test_rows: int
-    train_start_date: Optional[str] = None
-    train_end_date: Optional[str] = None
-    validation_start_date: Optional[str] = None
-    validation_end_date: Optional[str] = None
-    test_start_date: Optional[str] = None
-    test_end_date: Optional[str] = None
+    train_start_date: str | None = None
+    train_end_date: str | None = None
+    validation_start_date: str | None = None
+    validation_end_date: str | None = None
+    test_start_date: str | None = None
+    test_end_date: str | None = None
     train_ratio: float
     validation_ratio: float
     test_ratio: float
     leakage_safe: bool
-    quality_issues: List[str] = []
-    X_train_shape: List[int]
-    X_validation_shape: List[int]
-    X_test_shape: List[int]
+    quality_issues: list[str] = []
+    X_train_shape: list[int]
+    X_validation_shape: list[int]
+    X_test_shape: list[int]

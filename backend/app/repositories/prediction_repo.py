@@ -1,7 +1,7 @@
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert
+
 from app.models.database import Prediction
-from app.schemas.predictions import PredictionBase
 
 
 class PredictionRepository:

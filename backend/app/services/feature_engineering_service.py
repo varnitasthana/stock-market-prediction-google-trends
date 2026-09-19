@@ -1,14 +1,14 @@
 import logging
 from datetime import date
-from typing import List, Dict, Any, Optional
-import pandas as pd
-import numpy as np
+from typing import Any
 
-from app.repositories.market_data_repo import MarketDataRepository
-from app.repositories.trends_repo import TrendsRepository
-from app.repositories.search_term_repo import SearchTermRepository
+import numpy as np
+import pandas as pd
+
 from app.repositories.features_repo import FeaturesRepository
-from app.schemas.alignment import AlignedRow
+from app.repositories.market_data_repo import MarketDataRepository
+from app.repositories.search_term_repo import SearchTermRepository
+from app.repositories.trends_repo import TrendsRepository
 from app.utils.validators import validate_market_data, validate_trends_data
 
 logger = logging.getLogger(__name__)
@@ -28,11 +28,11 @@ class FeatureEngineer:
     async def generate_features(
         self,
         symbol: str,
-        search_term_ids: List[int],
+        search_term_ids: list[int],
         start_date: date,
         end_date: date,
         persist: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         market_rows = await self.market_repo.get_by_symbol_and_date_range(symbol, start_date, end_date)
         if not market_rows:
             raise FeatureEngineeringError(f"No market data found for {symbol} in range {start_date} to {end_date}")
@@ -51,7 +51,6 @@ class FeatureEngineer:
         terms = await self.term_repo.get_all(active_only=False)
         term_map = {t.id: t.term for t in terms}
 
-        trends_data = {}
         for term_id in search_term_ids:
             term_name = term_map.get(term_id)
             if not term_name:
@@ -144,7 +143,7 @@ class FeatureEngineer:
         return df
 
     @staticmethod
-    def _market_to_df(rows: List[Any]) -> pd.DataFrame:
+    def _market_to_df(rows: list[Any]) -> pd.DataFrame:
         if not rows:
             return pd.DataFrame(columns=["date", "open", "high", "low", "close", "adj_close", "volume"])
         data = []
@@ -161,7 +160,7 @@ class FeatureEngineer:
         return pd.DataFrame(data)
 
     @staticmethod
-    def _trends_to_df(rows: List[Any]) -> pd.DataFrame:
+    def _trends_to_df(rows: list[Any]) -> pd.DataFrame:
         if not rows:
             return pd.DataFrame(columns=["date", "interest_score"])
         data = []

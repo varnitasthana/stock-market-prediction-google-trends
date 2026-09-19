@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
+from app.schemas.search_terms import (
+    SearchTermCreate,
+    SearchTermResponse,
+    SearchTermUpdate,
+)
 from app.services.search_term_service import SearchTermService
-from app.schemas.search_terms import SearchTermCreate, SearchTermUpdate, SearchTermResponse
 
 router = APIRouter()
 
