@@ -717,6 +717,104 @@ Re-running feature generation for the same symbol, date range, and search terms 
 
 ---
 
+## Statistical Analysis
+
+### Overview
+
+Phase 7 investigates whether Google Trends variables have measurable statistical relationships with NIFTY 50 market behavior, using the Phase 6 engineered dataset.
+
+This phase produces evidence for research questions such as:
+- Are Google Trends scores correlated with market returns?
+- Do lagged Google Trends variables relate to future returns?
+- Are relationships different across search terms?
+- Are observed associations statistically significant?
+
+### Pipeline
+
+```
+Engineered Features
+        ↓
+Statistical Analysis Service
+        ↓
+Descriptive Statistics
+        ↓
+Correlation Analysis (Pearson + Spearman)
+        ↓
+Lag Analysis
+        ↓
+Direction Analysis
+        ↓
+Multiple-Testing Correction (Benjamini-Hochberg)
+        ↓
+Analysis Results
+```
+
+### Methods
+
+| Method | Purpose |
+|--------|---------|
+| Descriptive statistics | Count, mean, median, std, min, max for relevant variables |
+| Pearson correlation | Linear association between continuous variables |
+| Spearman correlation | Monotonic association based on ranks |
+| p-values | Statistical significance under the tested assumptions |
+| Benjamini-Hochberg FDR | Multiple-testing correction for many feature-target pairs |
+| Direction-group analysis | Compare Trends statistics for up vs down next-day movement |
+
+### Correlation Targets
+
+- `daily_return` — same-day market return
+- `next_day_return` — next trading day's return
+
+### Trends Features Analyzed
+
+For each search term, the following features are analyzed dynamically:
+
+- `{term}_trend`
+- `{term}_trend_lag_1`
+- `{term}_trend_lag_3`
+- `{term}_trend_lag_7`
+- `{term}_trend_change`
+
+### Lag Analysis
+
+Lagged Google Trends features are correlated with `next_day_return` to investigate whether prior search activity is associated with subsequent market behavior.
+
+### Direction Analysis
+
+Descriptive statistics are computed separately for:
+
+- `next_day_direction = 0` (down or flat next day)
+- `next_day_direction = 1` (up next day)
+
+This compares average Trends scores between upward and downward movement dates.
+
+### Multiple Testing
+
+Because many search terms and lagged features are tested, the Benjamini-Hochberg false discovery rate (FDR) correction is applied to Pearson correlation p-values. This adjusts for the increased probability of false positives when performing multiple tests.
+
+### API
+
+```http
+POST /api/statistics/analyze
+Content-Type: application/json
+
+{
+  "symbol": "^NSEI",
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30"
+}
+```
+
+Response includes descriptive statistics, correlations, lag analysis, and direction analysis.
+
+### Interpretation
+
+This phase measures **association, not causation**.
+
+A statistically significant correlation indicates a detectable linear or monotonic relationship in the tested sample. It does **not** prove that Google Trends causes market movements, nor does it guarantee future predictive performance.
+
+---
+
 ## ML Methodology
 
 ### Feature Engineering

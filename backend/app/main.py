@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routers import search_terms, market_data, trends, features, models, predictions, dashboard, alignment
+from app.api.routers import search_terms, market_data, trends, features, models, predictions, dashboard, alignment, statistics
 from app.core.logging import setup_logging
 
 app = FastAPI(
@@ -30,6 +30,7 @@ app.include_router(market_data.router, prefix="/api/market-data", tags=["market-
 app.include_router(trends.router, prefix="/api/trends", tags=["trends"])
 app.include_router(alignment.router, prefix="/api/alignment", tags=["alignment"])
 app.include_router(features.router, prefix="/api/features", tags=["features"])
+app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"])
 app.include_router(models.router, prefix="/api/models", tags=["models"])
 app.include_router(predictions.router, prefix="/api/predictions", tags=["predictions"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
