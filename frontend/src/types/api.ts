@@ -1,14 +1,3 @@
-import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-export const api = axios.create({
-  baseURL: `${API_BASE}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
 export interface SearchTerm {
   id: number;
   term: string;
@@ -58,6 +47,19 @@ export interface ModelRun {
   created_at: string;
 }
 
+export interface Prediction {
+  id: number;
+  model_run_id: number;
+  symbol: string;
+  prediction_date: string;
+  predicted_return: number | null;
+  predicted_direction: number | null;
+  probability: number | null;
+  actual_return: number | null;
+  actual_direction: number | null;
+  created_at: string;
+}
+
 export interface DashboardSummary {
   symbol: string;
   latest_close: number | null;
@@ -99,6 +101,14 @@ export interface MLDatasetPrepareResponse {
   X_test_shape: number[];
 }
 
+export interface ModelTrainRequest {
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  task: string;
+  model_name: string;
+}
+
 export interface ModelTrainResponse {
   model_run_id: number;
   model_name: string;
@@ -123,6 +133,11 @@ export interface ModelTrainResponse {
   validation_prediction_shape: number[];
   test_prediction_shape: number[];
   artifact_path: string | null;
+}
+
+export interface EvaluationRequest {
+  model_run_id: number;
+  evaluation_split: string;
 }
 
 export interface ClassificationEvaluationResponse {
@@ -171,6 +186,12 @@ export interface RegressionEvaluationResponse {
     predicted_value: number;
     mae: number;
   } | null;
+}
+
+export interface PredictionRequest {
+  model_run_id: number;
+  symbol: string;
+  prediction_date: string;
 }
 
 export interface ClassificationPredictionResponse {
@@ -234,53 +255,3 @@ export interface StatisticsAnalyzeResponse {
     std: number;
   }>>;
 }
-
-export const fetchDashboardSummary = async (symbol: string): Promise<DashboardSummary> => {
-  const { data } = await api.get('/dashboard/summary', { params: { symbol } });
-  return data;
-};
-
-export const fetchSearchTerms = async (): Promise<SearchTerm[]> => {
-  const { data } = await api.get('/search-terms/', { params: { active_only: true } });
-  return data;
-};
-
-export const fetchMarketData = async (symbol: string, startDate: string, endDate: string): Promise<MarketDataPoint[]> => {
-  const { data } = await api.get('/market-data/', { params: { symbol, start_date: startDate, end_date: endDate } });
-  return data;
-};
-
-export const fetchTrends = async (searchTermId: number, startDate: string, endDate: string): Promise<TrendDataPoint[]> => {
-  const { data } = await api.get('/trends/', { params: { search_term_id: searchTermId, start_date: startDate, end_date: endDate } });
-  return data;
-};
-
-export const fetchModelRuns = async (symbol?: string): Promise<ModelRun[]> => {
-  const { data } = await api.get('/models/', { params: symbol ? { symbol } : {} });
-  return data;
-};
-
-export const trainModel = async (payload: { symbol: string; start_date: string; end_date: string; task: string; model_name: string }): Promise<ModelTrainResponse> => {
-  const { data } = await api.post('/models/train', payload);
-  return data;
-};
-
-export const evaluateModel = async (payload: { model_run_id: number; evaluation_split: string }): Promise<ClassificationEvaluationResponse | RegressionEvaluationResponse> => {
-  const { data } = await api.post('/models/evaluate', payload);
-  return data;
-};
-
-export const predict = async (payload: { model_run_id: number; symbol: string; prediction_date: string }): Promise<ClassificationPredictionResponse | RegressionPredictionResponse> => {
-  const { data } = await api.post('/models/predict', payload);
-  return data;
-};
-
-export const prepareMLDataset = async (payload: { symbol: string; start_date: string; end_date: string; train_ratio?: number; validation_ratio?: number; test_ratio?: number }): Promise<MLDatasetPrepareResponse> => {
-  const { data } = await api.post('/ml-dataset/prepare', payload);
-  return data;
-};
-
-export const analyzeStatistics = async (payload: { symbol: string; start_date: string; end_date: string }): Promise<StatisticsAnalyzeResponse> => {
-  const { data } = await api.post('/statistics/analyze', payload);
-  return data;
-};

@@ -1268,6 +1268,65 @@ The feature row on date `D` contains information available up to date `D`. The m
 
 ---
 
+## Phase 12 — Frontend Dashboard
+
+Phase 12 provides a React + TypeScript + Vite + Tailwind dashboard that consumes the existing backend APIs and presents the complete ML pipeline.
+
+### Frontend architecture
+
+- React 18 with TypeScript
+- Vite dev server on `http://localhost:5173`
+- Tailwind CSS for styling
+- Recharts for market and trends visualization
+- React Query for data fetching and caching
+- Centralized API client in `frontend/src/services/api.ts`
+- TypeScript types in `frontend/src/types/api.ts`
+
+### Pages
+
+- **Dashboard**: pipeline overview, project summary cards, dataset limitation notice
+- **Data**: NIFTY 50 closing price chart and Google Trends interest chart
+- **Statistics**: descriptive statistics table and correlation analysis table
+- **Models**: train new models, view trained model runs, trigger validation/test evaluation
+- **Predictions**: select a trained model, symbol, and date to generate a historical prediction
+
+### Backend integration
+
+The dashboard consumes these existing endpoints:
+
+- `GET /api/dashboard/summary`
+- `GET /api/search-terms/`
+- `GET /api/market-data/`
+- `GET /api/trends/`
+- `POST /api/statistics/analyze`
+- `POST /api/ml-dataset/prepare`
+- `POST /api/models/train`
+- `POST /api/models/evaluate`
+- `POST /api/models/predict`
+
+### Prediction workflow
+
+1. Train a model from the Models page
+2. Open the Predictions page
+3. Select the trained model run
+4. Enter symbol and prediction date
+5. Submit to view predicted direction or predicted return
+
+### Leakage and safety
+
+The frontend never computes ML features, predictions, or evaluation metrics. All computation remains in the backend.
+
+### Limitations
+
+- Historical dataset only (2024-01-01 to 2024-06-30)
+- Small sample size (114 observations, 18 test observations)
+- No live market feed
+- No real-time Google Trends ingestion
+- No trading integration
+- No profitability guarantee
+
+---
+
 ## Future Improvements
 
 - SHAP explainability for model predictions
