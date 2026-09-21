@@ -1,4 +1,6 @@
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +10,7 @@ from app.ml.model_trainer import (
     SUPPORTED_REGRESSION_MODELS,
 )
 from app.schemas.evaluation import ClassificationEvaluationResponse, RegressionEvaluationResponse, EvaluationRequest
+from app.schemas.explainability import ExplainabilityResponse
 from app.schemas.models import ModelRunCreate, ModelRunResponse
 from app.schemas.prediction import ClassificationPredictionResponse, PredictionRequest, RegressionPredictionResponse
 from app.schemas.training import SUPPORTED_TASKS, ModelTrainRequest, ModelTrainResponse
@@ -88,7 +91,7 @@ async def evaluate_model(request: EvaluationRequest, db: AsyncSession = Depends(
     return RegressionEvaluationResponse(**result)
 
 
-@router.post("/predict")
+@router.post("/predict", response_model=ClassificationPredictionResponse | RegressionPredictionResponse)
 async def predict(request: PredictionRequest, db: AsyncSession = Depends(get_db)):
     service = PredictionService(db, model_run_id=request.model_run_id, symbol=request.symbol, prediction_date=request.prediction_date)
     try:
@@ -101,3 +104,40 @@ async def predict(request: PredictionRequest, db: AsyncSession = Depends(get_db)
     if result["task_type"] == "classification":
         return ClassificationPredictionResponse(**result)
     return RegressionPredictionResponse(**result)
+
+
+@router.get("/{model_run_id}/explain", response_model=ExplainabilityResponse)
+async def explain_model(model_run_id: int, symbol: str, prediction_date: str, db: AsyncSession = Depends(get_db)):
+    try:
+        parsed_date = date.fromisoformat(prediction_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {exc}") from exc
+    service = PredictionService(db, model_run_id=model_run_id, symbol=symbol, prediction_date=parsed_date)
+    try:
+        result = await service.predict()
+    except PredictionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Explanation failed: {exc}") from exc
+
+    feature_importance: dict[str, float] = {}
+    if result.get("shap_values") and result.get("feature_columns"):
+        for feature, shap_value in zip(result["feature_columns"], result["shap_values"], strict=False):
+            feature_importance[feature] = shap_value
+
+    top_features = [
+        {"feature": feature, "shap_value": value}
+        for feature, value in sorted(feature_importance.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
+    ]
+
+    return ExplainabilityResponse(
+        model_run_id=model_run_id,
+        model_name=result["model_name"],
+        task_type=result["task_type"],
+        prediction_date=prediction_date,
+        predicted_class=result.get("predicted_class"),
+        predicted_return=result.get("predicted_return"),
+        predicted_direction=result.get("predicted_direction"),
+        top_features=top_features,
+        feature_importance=feature_importance,
+    )
