@@ -31,10 +31,18 @@ export interface ModelRun {
   id: number;
   model_name: string;
   symbol: string;
+  task_type: string | null;
+  target_name: string | null;
   training_start: string;
   training_end: string;
   evaluation_start: string;
   evaluation_end: string;
+  test_start_date: string | null;
+  test_end_date: string | null;
+  parameters: Record<string, any> | null;
+  random_state: number | null;
+  feature_count: number | null;
+  artifact_path: string | null;
   metrics: Record<string, any> | null;
   created_at: string;
 }
@@ -62,4 +70,28 @@ export interface DashboardSummary {
   prediction_direction: number | null;
   prediction_probability: number | null;
   prediction_date: string | null;
+}
+
+export interface SentimentResponse {
+  symbol: string;
+  date: string;
+  sentiment_score: number;
+  sentiment_label: string;
+  source: string;
+  details: Record<string, any> | null;
+}
+
+export interface ExplainabilityResponse {
+  model_run_id: number;
+  model_name: string;
+  task_type: string;
+  prediction_date: string;
+  predicted_class: number | null;
+  predicted_return: number | null;
+  predicted_direction: string | null;
+  top_features: Array<{
+    feature: string;
+    shap_value: number;
+  }>;
+  feature_importance: Record<string, number>;
 }

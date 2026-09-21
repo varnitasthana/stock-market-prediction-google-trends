@@ -5,8 +5,10 @@ import DataExplorer from './pages/DataExplorer';
 import Statistics from './pages/Statistics';
 import Models from './pages/Models';
 import Predictions from './pages/Predictions';
+import Explainability from './pages/Explainability';
+import Sentiment from './pages/Sentiment';
 
-type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions';
+type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment';
 
 const DEFAULT_SYMBOL = '^NSEI';
 
@@ -25,6 +27,8 @@ function App() {
       {page === 'statistics' && <Statistics />}
       {page === 'models' && <Models />}
       {page === 'predictions' && <Predictions />}
+      {page === 'explainability' && <Explainability />}
+      {page === 'sentiment' && <Sentiment />}
     </Layout>
   );
 }

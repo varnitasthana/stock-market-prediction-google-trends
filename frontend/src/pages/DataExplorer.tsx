@@ -5,7 +5,7 @@ import type { MarketDataPoint, TrendDataPoint, SearchTerm } from '../types/api';
 
 const DEFAULT_SYMBOL = '^NSEI';
 const DEFAULT_START = '2024-01-01';
-const DEFAULT_END = '2024-06-30';
+const DEFAULT_END = '2026-09-21';
 
 export default function DataExplorer() {
   const { data: marketData, isLoading: marketLoading, error: marketError } = useQuery({
