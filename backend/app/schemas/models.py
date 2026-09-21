@@ -1,5 +1,4 @@
-from datetime import date
-from typing import Any
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -27,11 +26,11 @@ class ModelRunResponse(ModelRunBase):
     target_name: str | None = None
     test_start_date: date | None = None
     test_end_date: date | None = None
-    parameters: dict[str, Any] | None = None
+    parameters: str | None = None
     random_state: int | None = None
     feature_count: int | None = None
     artifact_path: str | None = None
-    metrics: dict[str, Any] | None = None
-    created_at: date
+    metrics: str | None = None
+    created_at: datetime
 
     model_config = {"from_attributes": True}

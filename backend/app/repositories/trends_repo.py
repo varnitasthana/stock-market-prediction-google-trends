@@ -1,4 +1,5 @@
-from sqlalchemy import insert, select
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import TrendsData
@@ -32,6 +33,7 @@ class TrendsRepository:
     async def bulk_insert(self, records: list[dict]):
         if not records:
             return
-        stmt = insert(TrendsData).values(records)
+        stmt = pg_insert(TrendsData).values(records)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["search_term_id", "date"])
         await self.db.execute(stmt)
         await self.db.flush()
