@@ -100,6 +100,11 @@ class TrainingService:
                 "n_estimators": 100,
                 "random_state": self.random_state,
             }
+        elif self.model_name in {"lstm_classifier", "lstm_regressor", "transformer_classifier", "transformer_regressor"}:
+            parameters = {
+                "architecture": self.model_name,
+                "random_state": self.random_state,
+            }
 
         model_run = await self.repo.create(
             ModelRunCreate(
@@ -118,20 +123,62 @@ class TrainingService:
         )
 
         artifact_path = ARTIFACTS_DIR / f"model_run_{model_run.id}.joblib"
-        joblib.dump(
-            {
-                "model": trainer.model,
-                "model_name": self.model_name,
-                "task_type": self.task_type,
-                "feature_columns": feature_columns,
-                "target_name": target_name,
-                "random_state": self.random_state,
-                "parameters": parameters,
-            },
-            artifact_path,
-        )
+        artifact = {
+            "model": trainer.model,
+            "model_name": self.model_name,
+            "task_type": self.task_type,
+            "feature_columns": feature_columns,
+            "target_name": target_name,
+            "random_state": self.random_state,
+            "parameters": parameters,
+        }
+
+        if self.model_name not in {"lstm_classifier", "lstm_regressor", "transformer_classifier", "transformer_regressor"}:
+            try:
+                import shap
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    if (self.task_type == "classification" and hasattr(trainer.model, "predict_proba")) or self.task_type == "regression":
+                        explainer = shap.Explainer(trainer.model, X_train)
+                    else:
+                        explainer = None
+                if explainer is not None:
+                    artifact["shap_explainer"] = explainer
+            except Exception as exc:
+                logger.warning("Could not create SHAP explainer: %s", exc)
+
+        joblib.dump(artifact, artifact_path)
         await self.repo.update_artifact_path(model_run.id, str(artifact_path))
         model_run.artifact_path = str(artifact_path)
+
+        try:
+            import mlflow
+            import mlflow.sklearn
+            from app.core.config import get_settings
+            settings = get_settings()
+            if hasattr(settings, "mlflow_tracking_uri") and settings.mlflow_tracking_uri:
+                mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+                mlflow.set_experiment(f"{self.symbol}_{self.task_type}")
+                with mlflow.start_run(run_name=f"{self.model_name}_{model_run.id}"):
+                    mlflow.log_params(parameters)
+                    if self.task_type == "classification":
+                        from app.ml.model_trainer import Evaluator
+                        train_preds = trainer.predict(X_train)
+                        train_metrics = Evaluator.evaluate_classification(y_train, train_preds)
+                        mlflow.log_metrics({f"train_{k}": v for k, v in train_metrics.items() if isinstance(v, (int, float))})
+                    else:
+                        from app.ml.model_trainer import Evaluator
+                        train_preds = trainer.predict(X_train)
+                        train_metrics = Evaluator.evaluate_regression(y_train, train_preds)
+                        mlflow.log_metrics({f"train_{k}": v for k, v in train_metrics.items() if isinstance(v, (int, float))})
+                    if self.model_name not in {"lstm_classifier", "lstm_regressor", "transformer_classifier", "transformer_regressor"}:
+                        try:
+                            mlflow.sklearn.log_model(trainer.model, "model")
+                        except Exception as exc:
+                            logger.warning("Could not log model to MLflow: %s", exc)
+        except Exception as exc:
+            logger.warning("MLflow logging failed: %s", exc)
 
         return {
             "model_run_id": model_run.id,

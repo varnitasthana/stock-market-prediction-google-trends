@@ -8,6 +8,7 @@ import pandas as pd
 
 from app.repositories.features_repo import FeaturesRepository
 from app.repositories.model_repo import ModelRepository
+from app.repositories.prediction_repo import PredictionRepository
 from app.services.ml_dataset_service import MLDatasetService
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class PredictionService:
         self.prediction_date = prediction_date
         self.model_repo = ModelRepository(db)
         self.features_repo = FeaturesRepository(db)
+        self.prediction_repo = PredictionRepository(db)
 
     async def predict(self) -> dict[str, Any]:
         model_run = await self.model_repo.get_by_id(self.model_run_id)
@@ -54,6 +56,7 @@ class PredictionService:
         task_type = artifact.get("task_type")
         model_name = artifact.get("model_name")
         target_name = artifact.get("target_name")
+        shap_explainer = artifact.get("shap_explainer")
 
         if model is None:
             raise PredictionError("Model artifact does not contain a model")
@@ -106,6 +109,18 @@ class PredictionService:
                 except Exception:
                     proba = None
 
+            shap_values = None
+            if shap_explainer is not None:
+                try:
+                    if model_name in {"lstm_classifier", "transformer_classifier"}:
+                        X_arr = pd.DataFrame({c: X[c] for c in feature_columns}).values
+                        X_arr = X_arr.reshape(1, X_arr.shape[0], 1)
+                        shap_values = shap_explainer(X_arr).values
+                    else:
+                        shap_values = shap_explainer(X).values
+                except Exception as exc:
+                    logger.warning("SHAP computation failed: %s", exc)
+
             return {
                 "model_run_id": self.model_run_id,
                 "model_name": model_name,
@@ -117,8 +132,22 @@ class PredictionService:
                 "predicted_direction": "Up" if int(predicted_value) == 1 else "Down",
                 "probability_down": float(proba[0]) if proba is not None else None,
                 "probability_up": float(proba[1]) if proba is not None else None,
+                "shap_values": shap_values.tolist() if shap_values is not None else None,
+                "feature_columns": feature_columns,
             }
         else:
+            shap_values = None
+            if shap_explainer is not None:
+                try:
+                    if model_name in {"lstm_regressor", "transformer_regressor"}:
+                        X_arr = pd.DataFrame({c: X[c] for c in feature_columns}).values
+                        X_arr = X_arr.reshape(1, X_arr.shape[0], 1)
+                        shap_values = shap_explainer(X_arr).values
+                    else:
+                        shap_values = shap_explainer(X).values
+                except Exception as exc:
+                    logger.warning("SHAP computation failed: %s", exc)
+
             return {
                 "model_run_id": self.model_run_id,
                 "model_name": model_name,
@@ -127,4 +156,12 @@ class PredictionService:
                 "prediction_date": self.prediction_date,
                 "target_name": target_name,
                 "predicted_return": predicted_value,
+                "shap_values": shap_values.tolist() if shap_values is not None else None,
+                "feature_columns": feature_columns,
             }
+
+    async def get_predictions_by_model_run(self, model_run_id: int):
+        return await self.prediction_repo.get_by_model_run(model_run_id)
+
+    async def get_latest_predictions(self, symbol: str):
+        return await self.prediction_repo.get_latest(symbol)

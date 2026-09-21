@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-SUPPORTED_CLASSIFICATION_MODELS = {"logistic_regression", "random_forest_classifier"}
-SUPPORTED_REGRESSION_MODELS = {"linear_regression", "random_forest_regressor"}
+SUPPORTED_CLASSIFICATION_MODELS = {"logistic_regression", "random_forest_classifier", "lstm_classifier", "transformer_classifier"}
+SUPPORTED_REGRESSION_MODELS = {"linear_regression", "random_forest_regressor", "lstm_regressor", "transformer_regressor"}
 SUPPORTED_TASKS = {"classification", "regression"}
 
 
