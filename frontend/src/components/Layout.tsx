@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions';
+type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment';
 
 interface LayoutProps {
   currentPage: Page;
@@ -14,6 +14,8 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'statistics', label: 'Statistics' },
   { page: 'models', label: 'Models' },
   { page: 'predictions', label: 'Predictions' },
+  { page: 'explainability', label: 'Explainability' },
+  { page: 'sentiment', label: 'Sentiment' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children }: LayoutProps) {
@@ -22,7 +24,7 @@ export default function Layout({ currentPage, onNavigate, children }: LayoutProp
       <header className="bg-white shadow">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Stock Market Behaviour Prediction System</h1>
-          <p className="mt-1 text-sm text-gray-500">Google Trends + NIFTY 50</p>
+          <p className="mt-1 text-sm text-gray-500">Google Trends + NIFTY 50 + Sentiment + Explainability</p>
         </div>
       </header>
       <nav className="bg-white border-b border-gray-200">

@@ -99,6 +99,14 @@ export interface MLDatasetPrepareResponse {
   X_test_shape: number[];
 }
 
+export interface ModelTrainRequest {
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  task: string;
+  model_name: string;
+}
+
 export interface ModelTrainResponse {
   model_run_id: number;
   model_name: string;
@@ -123,6 +131,11 @@ export interface ModelTrainResponse {
   validation_prediction_shape: number[];
   test_prediction_shape: number[];
   artifact_path: string | null;
+}
+
+export interface EvaluationRequest {
+  model_run_id: number;
+  evaluation_split: string;
 }
 
 export interface ClassificationEvaluationResponse {
@@ -173,6 +186,12 @@ export interface RegressionEvaluationResponse {
   } | null;
 }
 
+export interface PredictionRequest {
+  model_run_id: number;
+  symbol: string;
+  prediction_date: string;
+}
+
 export interface ClassificationPredictionResponse {
   model_run_id: number;
   model_name: string;
@@ -184,6 +203,8 @@ export interface ClassificationPredictionResponse {
   predicted_direction: string;
   probability_down: number | null;
   probability_up: number | null;
+  shap_values: number[] | null;
+  feature_columns: string[] | null;
 }
 
 export interface RegressionPredictionResponse {
@@ -194,6 +215,8 @@ export interface RegressionPredictionResponse {
   prediction_date: string;
   target_name: string;
   predicted_return: number;
+  shap_values: number[] | null;
+  feature_columns: string[] | null;
 }
 
 export interface StatisticsAnalyzeResponse {
@@ -233,6 +256,41 @@ export interface StatisticsAnalyzeResponse {
     median: number;
     std: number;
   }>>;
+}
+
+export interface SentimentResponse {
+  symbol: string;
+  date: string;
+  sentiment_score: number;
+  sentiment_label: string;
+  source: string;
+  details: Record<string, any> | null;
+}
+
+export interface SentimentTextRequest {
+  text: string;
+}
+
+export interface SentimentTextResponse {
+  score: number;
+  label: string;
+  positive_count: number;
+  negative_count: number;
+}
+
+export interface ExplainabilityResponse {
+  model_run_id: number;
+  model_name: string;
+  task_type: string;
+  prediction_date: string;
+  predicted_class: number | null;
+  predicted_return: number | null;
+  predicted_direction: string | null;
+  top_features: Array<{
+    feature: string;
+    shap_value: number;
+  }>;
+  feature_importance: Record<string, number>;
 }
 
 export const fetchDashboardSummary = async (symbol: string): Promise<DashboardSummary> => {
@@ -282,5 +340,20 @@ export const prepareMLDataset = async (payload: { symbol: string; start_date: st
 
 export const analyzeStatistics = async (payload: { symbol: string; start_date: string; end_date: string }): Promise<StatisticsAnalyzeResponse> => {
   const { data } = await api.post('/statistics/analyze', payload);
+  return data;
+};
+
+export const fetchDailySentiment = async (symbol: string): Promise<SentimentResponse> => {
+  const { data } = await api.get(`/sentiment/daily/${encodeURIComponent(symbol)}`);
+  return data;
+};
+
+export const analyzeSentimentText = async (payload: { text: string }): Promise<SentimentTextResponse> => {
+  const { data } = await api.post('/sentiment/text', payload);
+  return data;
+};
+
+export const explainModel = async (payload: { model_run_id: number; symbol: string; prediction_date: string }): Promise<ExplainabilityResponse> => {
+  const { data } = await api.get('/models/explain', { params: payload });
   return data;
 };

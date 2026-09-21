@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 const DEFAULT_SYMBOL = '^NSEI';
 const DEFAULT_START = '2024-01-01';
-const DEFAULT_END = '2024-06-30';
+const DEFAULT_END = '2026-09-21';
 
 const CLASSIFICATION_MODELS = [
   { value: 'logistic_regression', label: 'Logistic Regression' },
