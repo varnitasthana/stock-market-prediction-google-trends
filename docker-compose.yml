@@ -18,6 +18,19 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: stock-prediction-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   backend:
     build:
       context: ./backend
@@ -29,12 +42,73 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
       API_ENV: development
       LOG_LEVEL: INFO
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      MLFLOW_TRACKING_URI: http://localhost:5000
     volumes:
       - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - app-network
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stock-prediction-celery-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
+      API_ENV: development
+      LOG_LEVEL: INFO
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      MLFLOW_TRACKING_URI: http://localhost:5000
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.workers.celery_app worker --loglevel=info --queues=ingestion,ml
+    networks:
+      - app-network
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stock-prediction-celery-beat
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
+      API_ENV: development
+      LOG_LEVEL: INFO
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      MLFLOW_TRACKING_URI: http://localhost:5000
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    networks:
+      - app-network
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.17.0
+    container_name: stock-prediction-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_TRACKING_URI: http://localhost:5000
+    volumes:
+      - mlflow_data:/mlflow
+    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri file:/mlflow
     networks:
       - app-network
 
@@ -55,6 +129,7 @@ services:
 
 volumes:
   postgres_data:
+  mlflow_data:
 
 networks:
   app-network:

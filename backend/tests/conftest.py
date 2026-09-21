@@ -1,6 +1,11 @@
+import os
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+# Set environment to test BEFORE importing app
+os.environ["API_ENV"] = "test"
+os.environ["RATE_LIMIT_PER_MINUTE"] = "10000"  # High limit for tests
 
 from app.core.database import Base, get_db
 from app.main import app

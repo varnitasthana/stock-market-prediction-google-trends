@@ -363,3 +363,36 @@ async def test_api_validation_error(db_session):
         assert resp.status_code == 400
     finally:
         await _close_client(client)
+
+
+@pytest.mark.asyncio
+async def test_list_models_returns_200(db_session):
+    dates, closes = _build_training_rows(n=30)
+    await _ingest_symbol(db_session, "LISTMODEL", dates, closes)
+
+    client = await _get_client(db_session)
+    try:
+        resp = await client.post("/api/features/generate", json={
+            "symbol": "LISTMODEL",
+            "search_term_ids": [1],
+            "start_date": date(2024, 1, 1).isoformat(),
+            "end_date": date(2024, 1, 15).isoformat(),
+        })
+        assert resp.status_code == 200
+
+        resp = await client.post("/api/models/train", json={
+            "symbol": "LISTMODEL",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-15",
+            "task": "classification",
+            "model_name": "logistic_regression",
+        })
+        assert resp.status_code == 200
+
+        resp = await client.get("/api/models/")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body) == 1
+        assert body[0]["symbol"] == "LISTMODEL"
+    finally:
+        await _close_client(client)
