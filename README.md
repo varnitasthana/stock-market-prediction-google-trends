@@ -20,8 +20,15 @@ The system estimates the probability/direction of subsequent market movement bas
 8. [Docker](#docker)
 9. [API Documentation](#api-documentation)
 10. [ML Methodology](#ml-methodology)
-11. [Limitations](#limitations)
-12. [Future Improvements](#future-improvements)
+11. [Explainability](#explainability)
+12. [Model Versioning](#model-versioning)
+13. [Scheduled Ingestion](#scheduled-ingestion)
+14. [Sentiment Analysis](#sentiment-analysis)
+15. [Multi-Index Support](#multi-index-support)
+16. [Deep Learning Models](#deep-learning-models)
+17. [CI/CD](#cicd)
+18. [Limitations](#limitations)
+19. [Future Improvements](#future-improments)
 
 ---
 
@@ -88,10 +95,11 @@ yfinance   ──► Data Collection Layer ──► Market Data ──┤
 | Backend | **Python 3.12+**, **FastAPI**, **Pydantic v2** | REST API, validation, async support |
 | ORM | **SQLAlchemy 2.0** | Database access with asyncpg |
 | Database | **PostgreSQL 16** | Persistent data storage |
-| ML | **Pandas**, **NumPy**, **scikit-learn**, **XGBoost**, **scipy** | Data processing and modeling |
+| ML | **Pandas**, **NumPy**, **scikit-learn**, **XGBoost**, **scipy**, **TensorFlow**, **SHAP**, **MLflow** | Data processing, modeling, explainability, versioning |
 | Data Sources | **yfinance**, **pytrends** | Market and Google Trends data |
+| Task Queue | **Celery**, **Redis** | Scheduled data ingestion |
 | Frontend | **React 18**, **TypeScript**, **Vite**, **Tailwind CSS**, **Recharts** | Dashboard |
-| DevOps | **Docker**, **Docker Compose**, **pytest**, **Ruff** | Containerization, testing, linting |
+| DevOps | **Docker**, **Docker Compose**, **pytest**, **Ruff**, **GitHub Actions** | Containerization, testing, linting, CI/CD |
 
 ---
 
@@ -109,9 +117,13 @@ stock-market-behaviour-prediction/
 │   │   │       ├── search_terms.py
 │   │   │       ├── market_data.py
 │   │   │       ├── trends.py
+│   │   │       ├── alignment.py
 │   │   │       ├── features.py
+│   │   │       ├── statistics.py
+│   │   │       ├── ml_dataset.py
 │   │   │       ├── models.py
 │   │   │       ├── predictions.py
+│   │   │       ├── sentiment.py
 │   │   │       └── dashboard.py
 │   │   ├── core/
 │   │   │   ├── config.py              # Pydantic settings
@@ -133,6 +145,9 @@ stock-market-behaviour-prediction/
 │   │   │   ├── trends_pipeline.py
 │   │   │   ├── feature_pipeline.py
 │   │   │   └── run.py
+│   │   ├── workers/                   # Celery workers
+│   │   │   ├── celery_app.py
+│   │   │   └── scheduled_tasks.py
 │   │   └── utils/                     # Helpers
 │   ├── tests/
 │   ├── requirements.txt
@@ -141,6 +156,13 @@ stock-market-behaviour-prediction/
 │   ├── src/
 │   │   ├── components/
 │   │   ├── pages/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── DataExplorer.tsx
+│   │   │   ├── Statistics.tsx
+│   │   │   ├── Models.tsx
+│   │   │   ├── Predictions.tsx
+│   │   │   ├── Explainability.tsx
+│   │   │   └── Sentiment.tsx
 │   │   ├── services/
 │   │   ├── hooks/
 │   │   ├── types/
@@ -195,6 +217,10 @@ Services:
 - Backend: http://localhost:8000
 - Frontend: http://localhost:5173
 - PostgreSQL: localhost:5432
+- Redis: localhost:6379
+- MLflow: http://localhost:5000
+- Celery Worker: background task processing
+- Celery Beat: scheduled task execution
 
 ### Option 2: Manual
 
@@ -299,6 +325,16 @@ The provider uses bounded retries through `pytrends`'s built-in retry configurat
 ---
 
 ## Setup
+
+For detailed setup instructions, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
+### Quick Start
+
+1. Clone the repository
+2. Set up environment: `cp backend/.env.example backend/.env`
+3. Start services: `docker-compose up -d`
+4. Run migrations: `docker-compose exec backend alembic upgrade head`
+5. Access API at http://localhost:8000
 
 ### Prerequisites
 
@@ -412,9 +448,17 @@ FastAPI auto-generates interactive API documentation:
 | POST | `/api/market-data/ingest` | Ingest market data from yfinance |
 | GET | `/api/features/` | Get engineered features |
 | POST | `/api/features/generate` | Generate and persist engineered features |
+| POST | `/api/statistics/analyze` | Run statistical analysis |
+| POST | `/api/ml-dataset/prepare` | Prepare train/val/test splits |
 | GET | `/api/models/` | List model runs |
 | POST | `/api/models/` | Create model run |
+| POST | `/api/models/train` | Train a model |
+| POST | `/api/models/evaluate` | Evaluate a model |
+| POST | `/api/models/predict` | Generate prediction |
+| GET | `/api/models/{model_run_id}/explain` | SHAP explainability |
 | GET | `/api/predictions/` | Get predictions |
+| GET | `/api/sentiment/daily/{symbol}` | Daily sentiment score |
+| POST | `/api/sentiment/text` | Analyze text sentiment |
 | GET | `/api/dashboard/summary` | Dashboard summary |
 
 ### Trends Ingestion
@@ -991,6 +1035,14 @@ target_return = next_day_return
 
 ---
 
+## Security
+
+This application includes security features like rate limiting, input validation, and security headers. For production deployment, see [docs/SECURITY.md](docs/SECURITY.md) for security best practices.
+
+**Important**: This system is for research and educational purposes only. It is NOT investment advice and should not be used for actual trading decisions.
+
+---
+
 ## Limitations
 
 - Correlation does not imply causation.
@@ -1318,26 +1370,108 @@ The frontend never computes ML features, predictions, or evaluation metrics. All
 
 ### Limitations
 
-- Historical dataset only (2024-01-01 to 2024-06-30)
+- Historical dataset only (2024-01-01 to 2024-06-30) unless scheduled ingestion is enabled
 - Small sample size (114 observations, 18 test observations)
-- No live market feed
-- No real-time Google Trends ingestion
+- No live market feed by default; enable scheduled ingestion for daily updates
 - No trading integration
 - No profitability guarantee
 
 ---
 
+## Explainability
+
+The system integrates **SHAP (SHapley Additive exPlanations)** for model interpretability:
+
+- `GET /api/models/{model_run_id}/explain?symbol=...&prediction_date=...` returns SHAP-based feature importance
+- Predictions optionally include `shap_values` and `feature_columns`
+- Frontend Explainability page visualizes top features and their contribution to predictions
+- Supported for scikit-learn models; deep learning models return empty explainability (SHAP compatibility pending)
+
+---
+
+## Model Versioning
+
+Models are versioned using **MLflow**:
+
+- Training logs parameters, metrics, and artifacts to MLflow
+- Experiment name: `{symbol}_{task_type}`
+- Run name: `{model_name}_{model_run_id}`
+- MLflow UI available at `http://localhost:5000` in Docker Compose
+- Model registry tracks model lineage and performance over time
+
+---
+
+## Scheduled Ingestion
+
+**Celery + Redis** powers automated data pipelines:
+
+- Daily market data ingestion at 18:00 UTC
+- Daily Google Trends ingestion at 18:30 UTC
+- Daily sentiment ingestion at 19:00 UTC
+- Daily feature generation at 19:30 UTC
+- Tasks run in separate queues: `ingestion` and `ml`
+- Celery Beat scheduler manages cron-like scheduling
+
+---
+
+## Sentiment Analysis
+
+Sentiment analysis is available via:
+
+- `GET /api/sentiment/daily/{symbol}` — daily sentiment derived from market data (volume + return)
+- `POST /api/sentiment/text` — analyze sentiment of arbitrary financial text
+- Frontend Sentiment page displays daily sentiment scores and text analysis
+
+---
+
+## Multi-Index Support
+
+The system supports multiple market indices:
+
+- **NIFTY 50** (`^NSEI`) — default
+- **NIFTY Bank** (`^NSEBANK`)
+- **NIFTY IT** (`^CNXIT`)
+
+Configure via `SUPPORTED_SYMBOLS` in settings or `.env`.
+
+---
+
+## Deep Learning Models
+
+Extended model zoo includes deep learning architectures (requires TensorFlow):
+
+- **LSTM Classifier** (`lstm_classifier`)
+- **LSTM Regressor** (`lstm_regressor`)
+- **Transformer Classifier** (`transformer_classifier`)
+- **Transformer Regressor** (`transformer_regressor`)
+
+These models are trained via `POST /api/models/train` and follow the same API contract as traditional models.
+
+---
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
+
+- Backend linting with Ruff
+- Backend tests with pytest against PostgreSQL + Redis
+- Frontend linting with ESLint
+- Frontend build verification
+
+---
+
 ## Future Improvements
 
-- SHAP explainability for model predictions
-- Model versioning with MLflow
-- Scheduled data ingestion with Celery
 - Redis caching for API responses
-- Additional indices (NIFTY Bank, NIFTY IT)
-- Sentiment analysis from financial news
-- LSTM/Transformer comparison
-- GitHub Actions CI/CD
-- Cloud deployment
+- SHAP explainability for Transformer/LSTM models
+- Model versioning with MLflow Model Registry
+- Actual backtesting against stored actuals
+- Walk-forward validation pipeline
+- XGBoost model integration
+- Authentication and authorization
+- Rate limiting on ingestion endpoints
+- Cloud deployment (AWS/GCP/Azure)
+- LSTM/Transformer hyperparameter tuning
 
 ---
 
