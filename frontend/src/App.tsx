@@ -15,7 +15,7 @@ const DEFAULT_SYMBOL = '^NSEI';
 
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
-  const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
+  const [symbol] = useState(DEFAULT_SYMBOL);
 
   const navigate = (target: Page) => {
     setPage(target);

@@ -3,7 +3,7 @@ import HelpPanel from '../components/HelpPanel';
 import PageIntro from '../components/PageIntro';
 import StatusBadge from '../components/StatusBadge';
 import { fetchDashboardSummary, fetchLiveQuote, fetchMarketDataStatus, fetchModelRuns, fetchSearchTerms, refreshMarketData } from '../services/api';
-import type { DashboardSummary, ModelRun, SearchTerm } from '../types/api';
+import type { ModelRun } from '../types/api';
 import { formatDisplayDate } from '../utils/date';
 
 const PIPELINE_STEPS = [

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { analyzeSentimentText, fetchDailySentiment, fetchMarketDataStatus } from '../services/api';
-import type { MarketDataStatusResponse, SentimentResponse, SentimentTextResponse } from '../types/api';
+import type { MarketDataStatusResponse, SentimentTextResponse } from '../types/api';
 import HelpPanel from '../components/HelpPanel';
 import PageIntro from '../components/PageIntro';
 import StatusBadge from '../components/StatusBadge';

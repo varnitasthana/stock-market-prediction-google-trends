@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { analyzeStatistics, fetchMarketDataStatus } from '../services/api';
-import type { MarketDataStatusResponse, StatisticsAnalyzeResponse } from '../types/api';
+import type { MarketDataStatusResponse } from '../types/api';
 import FeatureGlossary from '../components/FeatureGlossary';
 import HelpPanel from '../components/HelpPanel';
 import PageIntro from '../components/PageIntro';
