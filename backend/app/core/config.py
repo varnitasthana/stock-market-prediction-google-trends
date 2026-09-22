@@ -1,7 +1,10 @@
+from datetime import date, timedelta
 from functools import lru_cache
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+from app.utils import trading_calendar
 
 
 class Settings(BaseSettings):
@@ -14,7 +17,12 @@ class Settings(BaseSettings):
     pytrends_sleep: int = 1
     default_market_symbol: str = "^NSEI"
     default_start_date: str = "2024-01-01"
-    default_end_date: str = "2026-09-21"
+    # ``None`` or empty means "today". Resolved at request time so the default
+    # window can never silently rot the way a hard-coded date does.
+    default_end_date: str | None = None
+    default_lookback_days: int = 365
+    #: Missed sessions before the dataset is flagged as stale in the UI.
+    stale_session_threshold: int = 1
     mlflow_tracking_uri: str | None = None
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
@@ -49,6 +57,28 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
     }
+
+    # --- Derived windows -----------------------------------------------------
+    # Every default range is anchored to the current date rather than a literal
+    # string baked into the source.
+
+    def resolved_end_date(self) -> date:
+        """End of the default data window: configured date, otherwise today."""
+        if self.default_end_date:
+            return date.fromisoformat(self.default_end_date)
+        return trading_calendar.today()
+
+    def resolved_start_date(self, end: date | None = None) -> date:
+        """Start of the default data window."""
+        if self.default_start_date:
+            return date.fromisoformat(self.default_start_date)
+        anchor = end or self.resolved_end_date()
+        return anchor - timedelta(days=self.default_lookback_days)
+
+    def default_window(self) -> tuple[date, date]:
+        """The default ``(start, end)`` range, always ending on a live date."""
+        end = self.resolved_end_date()
+        return self.resolved_start_date(end), end
 
 
 @lru_cache

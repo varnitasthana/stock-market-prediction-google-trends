@@ -46,7 +46,7 @@ async def update_market_data():
                 end_date=date.today().isoformat()
             )
             
-            print(f"\n✅ Success!")
+            print("\n✅ Success!")
             print(f"   Total records fetched: {result['total_records']}")
             print(f"   New records inserted: {result['inserted']}")
             print(f"   Date range: {result['date_range']}")
