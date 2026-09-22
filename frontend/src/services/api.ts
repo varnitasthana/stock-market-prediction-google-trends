@@ -377,3 +377,13 @@ export const fetchMarketDataStatus = async (symbol: string): Promise<MarketDataS
   const { data } = await api.get(`/market-data/status/${encodeURIComponent(symbol)}`);
   return data;
 };
+
+export const refreshMarketData = async (payload: { symbol: string; lookback_days?: number }): Promise<MarketRefreshResponse> => {
+  const { data } = await api.post('/market-data/refresh', payload);
+  return data;
+};
+
+export const fetchLiveQuote = async (symbol: string): Promise<LiveQuoteResponse> => {
+  const { data } = await api.get(`/market-data/live/${encodeURIComponent(symbol)}`);
+  return data;
+};
