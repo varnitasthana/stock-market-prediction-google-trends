@@ -14,25 +14,45 @@ logger = logging.getLogger(__name__)
 
 class ModelTrainingError(Exception):
     """Raised when model training fails"""
-    pass
 
 
 class ModelPredictionError(Exception):
     """Raised when model prediction fails"""
-    pass
 
-SUPPORTED_CLASSIFICATION_MODELS = {
-    "logistic_regression",
-    "random_forest_classifier",
-    "lstm_classifier",
-    "transformer_classifier",
-}
-SUPPORTED_REGRESSION_MODELS = {
-    "linear_regression",
-    "random_forest_regressor",
-    "lstm_regressor",
-    "transformer_regressor",
-}
+
+def _is_tensorflow_available() -> bool:
+    try:
+        import tensorflow as tf  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+_TENSORFLOW_AVAILABLE = _is_tensorflow_available()
+
+if _TENSORFLOW_AVAILABLE:
+    SUPPORTED_CLASSIFICATION_MODELS = {
+        "logistic_regression",
+        "random_forest_classifier",
+        "lstm_classifier",
+        "transformer_classifier",
+    }
+    SUPPORTED_REGRESSION_MODELS = {
+        "linear_regression",
+        "random_forest_regressor",
+        "lstm_regressor",
+        "transformer_regressor",
+    }
+else:
+    SUPPORTED_CLASSIFICATION_MODELS = {
+        "logistic_regression",
+        "random_forest_classifier",
+    }
+    SUPPORTED_REGRESSION_MODELS = {
+        "linear_regression",
+        "random_forest_regressor",
+    }
+
 SUPPORTED_TASKS = {"classification", "regression"}
 
 

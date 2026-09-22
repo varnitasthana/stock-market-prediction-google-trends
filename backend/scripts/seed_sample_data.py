@@ -11,14 +11,12 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import pandas as pd
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import get_settings
-from app.models.database import Base, SearchTerm, MarketData, TrendsData, EngineeredFeature
+from app.models.database import SearchTerm, MarketData, TrendsData, EngineeredFeature
 from app.pipeline.market_pipeline import MarketIngestionService
-from app.pipeline.trends_pipeline import TrendsIngestionService
 from app.services.feature_engineering_service import FeatureEngineeringService
 
 settings = get_settings()
@@ -114,7 +112,7 @@ async def seed_trends_data(session: AsyncSession, search_terms: list):
     print("\n🔍 Creating Google Trends data...")
     
     end_date = date.today()
-    start_date = end_date - timedelta(days=90)
+    _start_date = end_date - timedelta(days=90)
     
     # Get all market dates
     from sqlalchemy import select
@@ -229,7 +227,7 @@ async def main():
         await generate_features(session)
         
         # Step 6: Verify data
-        counts = await verify_data(session)
+        await verify_data(session)
     
     await engine.dispose()
     
