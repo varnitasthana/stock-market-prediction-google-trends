@@ -5,6 +5,28 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def select_market_ingestion_window(
+    latest: date | None,
+    settings,
+    reference=None,
+) -> tuple[date, date] | None:
+    """Select a settled-session window without requesting future data."""
+    from app.utils import trading_calendar
+
+    end_date = trading_calendar.latest_expected_session(reference)
+    if latest is not None and latest >= end_date:
+        return None
+
+    start_date = (
+        trading_calendar.next_business_day(latest)
+        if latest is not None
+        else settings.resolved_start_date(end_date)
+    )
+    if start_date > end_date:
+        return None
+    return start_date, end_date
+
+
 async def _get_db_session():
     from app.core.database import get_db
     async for session in get_db():
