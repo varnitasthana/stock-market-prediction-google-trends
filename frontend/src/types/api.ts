@@ -309,3 +309,38 @@ export interface MarketDataStatusResponse {
   last_checked_at: string;
   message: string;
 }
+
+export interface MarketRefreshRequest {
+  symbol: string;
+  lookback_days?: number;
+}
+
+export interface MarketRefreshResponse {
+  symbol: string;
+  requested_start: string;
+  requested_end: string;
+  downloaded_rows: number;
+  new_rows: number;
+  updated_rows: number;
+  metrics_refreshed: number;
+  latest_stored_date: string | null;
+  status: MarketDataStatusResponse | null;
+  message: string;
+}
+
+export interface LiveQuoteResponse {
+  symbol: string;
+  as_of: string | null;
+  price: number | null;
+  previous_close: number | null;
+  change: number | null;
+  change_percent: number | null;
+  day_high: number | null;
+  day_low: number | null;
+  day_open: number | null;
+  volume: number | null;
+  direction: string;
+  source: string;
+  is_live: boolean;
+  retrieved_at: string;
+}
