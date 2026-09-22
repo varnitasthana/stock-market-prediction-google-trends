@@ -8,15 +8,15 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-const NAV_ITEMS: { page: Page; label: string }[] = [
-  { page: 'dashboard', label: 'Dashboard' },
-  { page: 'data', label: 'Data' },
-  { page: 'statistics', label: 'Statistics' },
-  { page: 'models', label: 'Models' },
-  { page: 'predictions', label: 'Predictions' },
-  { page: 'explainability', label: 'Explainability' },
-  { page: 'sentiment', label: 'Sentiment' },
-  { page: 'guide', label: 'Guide' },
+const NAV_ITEMS: { page: Page; label: string; description: string }[] = [
+  { page: 'dashboard', label: 'Dashboard', description: 'Data health and project overview' },
+  { page: 'data', label: 'Data Explorer', description: 'Historical market and Trends charts' },
+  { page: 'statistics', label: 'Statistics', description: 'Correlation, lag, and pattern analysis' },
+  { page: 'models', label: 'Models', description: 'Train and evaluate machine-learning models' },
+  { page: 'predictions', label: 'Predictions', description: 'Estimate a historical session outcome' },
+  { page: 'explainability', label: 'Explainability', description: 'See what influenced a model output' },
+  { page: 'sentiment', label: 'Sentiment', description: 'Read simple market and text sentiment' },
+  { page: 'guide', label: 'Guide', description: 'Learn how to use every feature' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children }: LayoutProps) {
@@ -35,6 +35,8 @@ export default function Layout({ currentPage, onNavigate, children }: LayoutProp
               <button
                 key={item.page}
                 onClick={() => onNavigate(item.page)}
+                title={item.description}
+                aria-label={`${item.label}: ${item.description}`}
                 className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${
                   currentPage === item.page
                     ? 'border-blue-500 text-blue-600'
