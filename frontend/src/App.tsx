@@ -7,8 +7,9 @@ import Models from './pages/Models';
 import Predictions from './pages/Predictions';
 import Explainability from './pages/Explainability';
 import Sentiment from './pages/Sentiment';
+import Guide from './pages/Guide';
 
-type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment';
+type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment' | 'guide';
 
 const DEFAULT_SYMBOL = '^NSEI';
 
@@ -29,6 +30,7 @@ function App() {
       {page === 'predictions' && <Predictions />}
       {page === 'explainability' && <Explainability />}
       {page === 'sentiment' && <Sentiment />}
+      {page === 'guide' && <Guide />}
     </Layout>
   );
 }

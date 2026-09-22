@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment';
+type Page = 'dashboard' | 'data' | 'statistics' | 'models' | 'predictions' | 'explainability' | 'sentiment' | 'guide';
 
 interface LayoutProps {
   currentPage: Page;
@@ -16,6 +16,7 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'predictions', label: 'Predictions' },
   { page: 'explainability', label: 'Explainability' },
   { page: 'sentiment', label: 'Sentiment' },
+  { page: 'guide', label: 'Guide' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children }: LayoutProps) {
