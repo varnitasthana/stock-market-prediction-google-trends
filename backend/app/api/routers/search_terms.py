@@ -6,16 +6,28 @@ from app.schemas.search_terms import (
     SearchTermCreate,
     SearchTermResponse,
     SearchTermUpdate,
+    SearchTermWithCoverage,
 )
 from app.services.search_term_service import SearchTermService
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[SearchTermResponse])
-async def list_search_terms(active_only: bool = True, db: AsyncSession = Depends(get_db)):
+@router.get("/", response_model=list[SearchTermWithCoverage])
+async def list_search_terms(
+    active_only: bool = True,
+    with_data_only: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Configured search terms, each annotated with its stored trend coverage.
+
+    Pass ``with_data_only=true`` to only get terms that can actually be
+    charted.
+    """
     service = SearchTermService(db)
-    return await service.list_terms(active_only=active_only)
+    return await service.list_terms_with_coverage(
+        active_only=active_only, with_data_only=with_data_only
+    )
 
 
 @router.post("/", response_model=SearchTermResponse, status_code=201)
