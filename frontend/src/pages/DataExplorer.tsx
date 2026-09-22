@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { fetchMarketData, fetchTrends, fetchSearchTerms, fetchMarketDataStatus } from '../services/api';
@@ -80,17 +80,6 @@ export default function DataExplorer() {
   });
 
   const [selectedTermId, setSelectedTermId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!terms?.length) {
-      setSelectedTermId(null);
-      return;
-    }
-
-    if (selectedTermId === null || !terms.some((term: SearchTerm) => term.id === selectedTermId)) {
-      setSelectedTermId(terms[0].id);
-    }
-  }, [selectedTermId, terms]);
 
   const activeTerm = terms?.find((term: SearchTerm) => term.id === selectedTermId) ?? terms?.[0];
 
