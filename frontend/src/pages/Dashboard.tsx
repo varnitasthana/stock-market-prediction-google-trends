@@ -120,7 +120,7 @@ export default function Dashboard({ symbol }: { symbol: string }) {
         <h2 className="text-xl font-semibold text-gray-900">Project Summary</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard title="Symbol" value={summary?.symbol ?? symbol} loading={summaryLoading} />
-          <SummaryCard title="Latest Close" value={liveQuote?.price != null ? Number(liveQuote.price).toFixed(2) : (summary?.latest_close != null ? Number(summary.latest_close).toFixed(2) : 'N/A')} loading={summaryLoading} subtitle={liveQuote?.as_of ? `As of ${liveQuote.as_of}` : undefined} />
+          <SummaryCard title="Latest Close" value={liveQuote?.price != null ? Number(liveQuote.price).toFixed(2) : (summary?.latest_close != null ? Number(summary.latest_close).toFixed(2) : 'N/A')} loading={summaryLoading} subtitle={liveQuote?.as_of ? `As of ${formatDisplayDate(liveQuote.as_of)}` : undefined} />
           <SummaryCard title="Daily Return" value={summary?.latest_daily_return != null ? Number(summary.latest_daily_return).toFixed(4) : 'N/A'} loading={summaryLoading} />
           <SummaryCard title="Models Trained" value={String(modelCount)} loading={summaryLoading} />
           <SummaryCard title="Classification Models" value={String(classificationModels)} loading={summaryLoading} />
