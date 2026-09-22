@@ -32,7 +32,6 @@ async def lifespan(app: FastAPI):
     setup_logging()
     yield
     # Shutdown
-    pass
 
 
 app = FastAPI(
