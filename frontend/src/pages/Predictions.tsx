@@ -62,7 +62,7 @@ export default function Predictions() {
 
   useEffect(() => {
     predictionMutation.reset();
-  }, [selectedModelId, symbol, predictionDate]);
+  }, [selectedModelId, symbol, predictionDate, predictionMutation]);
 
   const result = predictionMutation.data as PredictionResult | undefined;
   const isClassification = result?.task_type === 'classification';
@@ -248,7 +248,7 @@ function RegressionResult({ result }: { result: RegressionPredictionResponse }) 
     <div className="space-y-2">
       <p className="text-sm text-gray-500">Predicted Next-Session Return</p>
       <p className="text-3xl font-semibold text-gray-900">{(result.predicted_return * 100).toFixed(3)}%</p>
-      <p className="text-xs text-gray-500">This is the model's numeric estimate for the target return, not an actual outcome.</p>
+      <p className="text-xs text-gray-500">This is the model numeric estimate for the target return, not an actual outcome.</p>
     </div>
   );
 }

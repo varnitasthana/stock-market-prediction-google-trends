@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { explainModel, fetchMarketDataStatus, fetchModelRuns } from '../services/api';
-import type { ExplainabilityResponse, MarketDataStatusResponse, ModelRun } from '../types/api';
+import type { MarketDataStatusResponse, ModelRun } from '../types/api';
 import FeatureGlossary from '../components/FeatureGlossary';
 import HelpPanel from '../components/HelpPanel';
 import PageIntro from '../components/PageIntro';
@@ -39,8 +39,6 @@ export default function Explainability() {
   });
 
   const safePredictionDate = marketStatus?.last_stored_date ?? marketStatus?.expected_session ?? getTodayISO();
-  const resolvedPredictionDate = predictionDate || safePredictionDate;
-  const normalizedSymbol = symbol.trim();
 
   const { data: models, isLoading: modelsLoading, error: modelsError } = useQuery({
     queryKey: ['modelRuns'],
@@ -79,7 +77,7 @@ export default function Explainability() {
         <p><strong>Inputs:</strong> A persisted model run, a matching symbol, and a Historical Prediction Date with engineered feature values.</p>
         <p><strong>Outputs:</strong> The prediction summary and the leading features ranked by absolute SHAP value.</p>
         <p><strong>Interpretation:</strong> A positive SHAP value increased the model output; a negative value decreased it. The bar length shows relative influence within the displayed features.</p>
-        <p><strong>Limitations:</strong> SHAP explains the model's behavior, not market causality. Values depend on the selected model, date, feature pipeline, and training sample.</p>
+        <p><strong>Limitations:</strong> SHAP explains the model behavior, not market causality. Values depend on the selected model, date, feature pipeline, and training sample.</p>
         <p><strong>Historical patterns:</strong> Compare explanations across several dates and market directions, then check Statistics for broader historical associations.</p>
       </HelpPanel>
 
