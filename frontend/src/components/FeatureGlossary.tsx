@@ -124,7 +124,7 @@ export function getFeatureDefinition(featureName: string): FeatureDefinition {
 
   return {
     name: featureName,
-    label: featureName.replaceAll('_', ' '),
+    label: featureName.split('_').join(' '),
     description: 'An engineered input created from historical market or search-interest data.',
     howToRead: 'Check the Statistics page to see its historical relationship with the target.',
   };
