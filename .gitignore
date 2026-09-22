@@ -25,4 +25,5 @@ Thumbs.db
 .vscode/
 .idea/
 kilo.local.json
+.kilo/
 artifacts/
