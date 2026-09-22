@@ -51,6 +51,7 @@ export default function Dashboard({ symbol }: { symbol: string }) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['marketStatus', symbol] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard', symbol] });
+      void queryClient.invalidateQueries({ queryKey: ['liveQuote', symbol] });
     },
   });
 
