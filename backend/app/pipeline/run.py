@@ -17,8 +17,8 @@ async def run_pipeline():
     logger.info("Initializing database...")
     await init_db()
 
-    start_date = settings.default_start_date
-    end_date = settings.default_end_date
+    end_date = settings.resolved_end_date()
+    start_date = settings.resolved_start_date(end_date)
     symbol = settings.default_market_symbol
 
     async for db in get_db():

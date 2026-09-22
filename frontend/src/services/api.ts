@@ -370,7 +370,7 @@ export const analyzeSentimentText = async (payload: { text: string }): Promise<S
 };
 
 export const explainModel = async (payload: { model_run_id: number; symbol: string; prediction_date: string }): Promise<ExplainabilityResponse> => {
-  const { data } = await api.get('/models/explain', { params: payload });
+  const { data } = await api.get(`/models/${payload.model_run_id}/explain`, { params: { symbol: payload.symbol, prediction_date: payload.prediction_date } });
   return data;
 };
 
