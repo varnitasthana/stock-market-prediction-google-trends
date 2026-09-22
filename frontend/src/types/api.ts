@@ -294,3 +294,18 @@ export interface ExplainabilityResponse {
   }>;
   feature_importance: Record<string, number>;
 }
+
+export interface MarketDataStatusResponse {
+  symbol: string;
+  today: string;
+  expected_session: string;
+  last_stored_date: string;
+  sessions_behind: number;
+  is_stale: boolean;
+  calendar_days_behind: number;
+  row_count: number;
+  first_stored_date: string;
+  has_derived_metrics: boolean;
+  last_checked_at: string;
+  message: string;
+}
