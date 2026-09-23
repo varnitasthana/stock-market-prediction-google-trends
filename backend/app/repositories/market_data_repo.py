@@ -1,4 +1,4 @@
-from sqlalchemy import bindparam, func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,45 +85,43 @@ class MarketDataRepository:
         if not records:
             return 0
 
+        self.db.expunge_all()
+
         stmt = pg_insert(MarketData).values(records)
         stmt = stmt.on_conflict_do_update(
             index_elements=["symbol", "date"],
             set_={col: getattr(stmt.excluded, col) for col in _UPDATABLE_COLUMNS},
         )
-        await self.db.execute(stmt)
-        await self.db.flush()
+        await self.db.execute(stmt, execution_options={"synchronize_session": False})
         return len(records)
 
     async def update_metrics(self, symbol: str, metrics: dict) -> int:
         """Write ``{date: (daily_return, volatility)}`` back onto stored rows.
 
-        Issued as a single executemany statement: a full series is hundreds of
-        rows and one round-trip per row would dominate refresh latency.
+        Loads matching ORM objects and updates them in Python so the session
+        never has to synchronize a bulk UPDATE that uses non-PK WHERE clauses.
         """
         if not metrics:
             return 0
 
+        dates = list(metrics.keys())
         stmt = (
-            update(MarketData)
-            .where(MarketData.symbol == bindparam("b_symbol"))
-            .where(MarketData.date == bindparam("b_date"))
-            .values(
-                daily_return=bindparam("b_daily_return"),
-                volatility=bindparam("b_volatility"),
-            )
+            select(MarketData)
+            .where(MarketData.symbol == symbol)
+            .where(MarketData.date.in_(dates))
         )
-        params = [
-            {
-                "b_symbol": symbol,
-                "b_date": row_date,
-                "b_daily_return": daily_return,
-                "b_volatility": volatility,
-            }
-            for row_date, (daily_return, volatility) in metrics.items()
-        ]
-        await self.db.execute(stmt, params)
+        result = await self.db.execute(stmt)
+        rows = result.scalars().all()
+
+        updated = 0
+        for row in rows:
+            daily_return, volatility = metrics[row.date]
+            row.daily_return = daily_return
+            row.volatility = volatility
+            updated += 1
+
         await self.db.flush()
-        return len(params)
+        return updated
 
     async def get_by_symbol(self, symbol: str, limit: int = 100):
         stmt = (
