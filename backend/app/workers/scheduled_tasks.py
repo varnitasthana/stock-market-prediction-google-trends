@@ -73,7 +73,7 @@ def daily_trends_ingestion() -> dict[str, Any]:
             provider = PytrendsProvider()
             trends_service = TrendsIngestionService(db, provider=provider)
             end_date = date.today().isoformat()
-            start_date = (date.today() - __import__("datetime").timedelta(days=7)).isoformat()
+            start_date = (date.today() - __import__("datetime").timedelta(days=30)).isoformat()
             results = await trends_service.ingest_all_terms(start_date, end_date)
             return {"status": "success", "results": results}
 

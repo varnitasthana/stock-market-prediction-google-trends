@@ -329,6 +329,11 @@ export const fetchTrends = async (searchTermId: number, startDate: string, endDa
   return data;
 };
 
+export const refreshAllTrends = async (startDate?: string, endDate?: string): Promise<any> => {
+  const { data } = await api.post('/trends/refresh', { start_date: startDate, end_date: endDate });
+  return data;
+};
+
 export const fetchModelRuns = async (symbol?: string): Promise<ModelRun[]> => {
   const { data } = await api.get('/models/', { params: symbol ? { symbol } : {} });
   return data;
