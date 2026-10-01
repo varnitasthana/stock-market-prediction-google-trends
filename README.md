@@ -29,6 +29,7 @@ The system estimates the probability/direction of subsequent market movement bas
 17. [CI/CD](#cicd)
 18. [Limitations](#limitations)
 19. [Future Improvements](#future-improments)
+20. [Data Freshness](#data-freshness)
 
 ---
 
@@ -191,17 +192,43 @@ stock-market-behaviour-prediction/
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:5173 |
+| Frontend Dashboard | http://localhost:5173 |
 | Backend API | http://localhost:8000 |
 | Swagger UI | http://localhost:8000/docs |
+| ReDoc | http://localhost:8000/redoc |
 | OpenAPI JSON | http://localhost:8000/openapi.json |
 | Health Check | http://localhost:8000/api/health |
+| Market Data Status | http://localhost:8000/api/market-data/status/%5ENSEI |
+| MLflow UI (Docker only) | http://localhost:5000 |
+
+> **Note:** These are `localhost` URLs. They resolve only on the machine running the stack.
+> Anyone else opening them will see nothing, because `localhost` always points at
+> their own computer. To share the app with other people you must deploy it to a
+> public host (see [Public Deployment](#public-deployment)).
+
+### LAN Access (same Wi-Fi / same network)
+
+To let other devices on the same network open the dashboard, start the Vite dev
+server bound to all interfaces:
+
+```bash
+cd frontend
+npm run dev -- --host 0.0.0.0
+```
+
+Then share `http://<your-LAN-IP>:5173` (e.g. `http://192.168.1.5:5173`) and start
+the backend the same way:
+
+```bash
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 ### Public Deployment
 
 **Public URL:** NOT DEPLOYED YET
 
-This project runs locally only. No public hosting is configured.
+This project currently runs locally only. No public hosting is configured.
 
 ---
 
@@ -441,7 +468,8 @@ FastAPI auto-generates interactive API documentation:
 | DELETE | `/api/search-terms/{id}` | Delete search term |
 | GET | `/api/trends/` | Get trends data for a term |
 | GET | `/api/trends/recent/{search_term_id}` | Get recent trends |
-| POST | `/api/trends/ingest` | Ingest Google Trends data |
+| POST | `/api/trends/ingest` | Ingest Google Trends data for one term |
+| POST | `/api/trends/refresh` | Refresh Google Trends for all active terms up to today |
 | POST | `/api/alignment/` | Align market and trends data |
 | GET | `/api/market-data/` | Get market data |
 | GET | `/api/market-data/recent/{symbol}` | Get recent market data |
@@ -499,6 +527,57 @@ Notes:
 - Only active search terms should be used for ingestion.
 - Duplicate dates for the same search term are automatically skipped.
 - The endpoint returns `502 Bad Gateway` if the external Google Trends provider is unavailable.
+
+### Keeping Google Trends Data Fresh
+
+Google Trends publishes daily interest data with roughly a 1–2 day lag, so the most
+recent sessions will not appear the moment a market day closes. To always display the
+latest available dates, refresh a rolling window rather than a single day.
+
+```bash
+# Full refresh: every active term, default start date through today
+cd backend
+.\.venv\Scripts\activate
+python scripts\refresh_trends.py
+```
+
+Or via the API:
+
+```http
+POST /api/trends/refresh
+Content-Type: application/json
+
+{}
+```
+
+Both dates are optional. Omit them to default to `DEFAULT_START_DATE` → today:
+
+```json
+{
+  "start_date": "2024-01-01",
+  "end_date": "2026-09-30"
+}
+```
+
+Response:
+
+```json
+{
+  "requested_term_ids": [1, 2, 3],
+  "results": [
+    { "term": "recession", "total_records": 640, "inserted": 2, "duplicates_skipped": 638, "error": null }
+  ],
+  "total_inserted": 2,
+  "total_duplicates_skipped": 1914
+}
+```
+
+The Celery Beat schedule (`ingest-trends-daily`, 18:30 UTC) already re-pulls a rolling
+30-day window on each run, so missed days are recovered automatically.
+
+> Scores are stored per `(search_term_id, date)`. Re-running a refresh updates coverage
+> without duplicating rows, but a date already stored is not overwritten if Google later
+> revises its value.
 
 ---
 
@@ -1406,7 +1485,7 @@ Models are versioned using **MLflow**:
 **Celery + Redis** powers automated data pipelines:
 
 - Daily market data ingestion at 18:00 UTC
-- Daily Google Trends ingestion at 18:30 UTC
+- Daily Google Trends ingestion at 18:30 UTC (rolling 30-day window, so recent dates self-heal after Google publishes late data)
 - Daily sentiment ingestion at 19:00 UTC
 - Daily feature generation at 19:30 UTC
 - Tasks run in separate queues: `ingestion` and `ml`
@@ -1472,6 +1551,24 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
 - Rate limiting on ingestion endpoints
 - Cloud deployment (AWS/GCP/Azure)
 - LSTM/Transformer hyperparameter tuning
+
+---
+
+## Data Freshness
+
+Both upstream sources publish on a delay, so the dashboard can trail the calendar by a
+session or two. This is expected and is surfaced in the UI as a stale-data warning
+rather than hidden.
+
+| Source | Typical lag | How it is refreshed |
+|--------|-------------|---------------------|
+| Google Trends (`pytrends`) | 1–2 days | Rolling 30-day window on `ingest-trends-daily`; `POST /api/trends/refresh` or `scripts/refresh_trends.py` on demand |
+| Market data (`yfinance`) | Same day after close | `daily_market_ingestion`, or `POST /api/market-data/refresh` |
+| Engineered features | After both sources land | `daily_feature_generation`, or `POST /api/features/generate` |
+
+Ordering matters. Market rows that need neighbouring closes to compute
+`daily_return` and `volatility_5d` are refreshed after new prices land, and features
+are regenerated only after the underlying market and trends rows exist.
 
 ---
 
