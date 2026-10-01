@@ -84,8 +84,8 @@ async def refresh_all_trends(request: TrendsRefreshRequest, db: AsyncSession = D
     from app.repositories.search_term_repo import SearchTermRepository
 
     settings = get_settings()
-    end_date = request.end_date or date.today()
-    start_date = request.start_date or date.fromisoformat(settings.default_start_date)
+    end_date = request.end_date or settings.resolved_end_date()
+    start_date = request.start_date or settings.resolved_start_date(end_date)
 
     term_repo = SearchTermRepository(db)
     terms = await term_repo.get_all(active_only=True)

@@ -40,19 +40,45 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
-      API_ENV: development
-      LOG_LEVEL: INFO
+      API_ENV: ${API_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret-key-32chars-min}
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
-      MLFLOW_TRACKING_URI: http://localhost:5000
-    volumes:
-      - ./backend:/app
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      # Comma-separated list; the frontend origin must be present when the
+      # frontend is served from a different host than the API.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      RELOAD: ${RELOAD:-0}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - app-network
+
+  # One-shot: migrations run on backend boot, so this only populates data.
+  # Google Trends is rate limited, hence the separate profile.
+  bootstrap:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stock-prediction-bootstrap
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
+      API_ENV: development
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret-key-32chars-min}
+      DEFAULT_MARKET_SYMBOL: ${DEFAULT_MARKET_SYMBOL:-^NSEI}
+      DEFAULT_START_DATE: ${DEFAULT_START_DATE:-2024-01-01}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      SKIP_MIGRATIONS: "1"
+    command: ["python", "scripts/bootstrap_demo.py"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles: ["bootstrap"]
+    restart: "no"
     networks:
       - app-network
 
@@ -63,19 +89,19 @@ services:
     container_name: stock-prediction-celery-worker
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
-      API_ENV: development
-      LOG_LEVEL: INFO
+      API_ENV: ${API_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret-key-32chars-min}
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
-      MLFLOW_TRACKING_URI: http://localhost:5000
-    volumes:
-      - ./backend:/app
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+    command: celery -A app.workers.celery_app worker --loglevel=info --queues=ingestion,ml
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.workers.celery_app worker --loglevel=info --queues=ingestion,ml
     networks:
       - app-network
 
@@ -86,16 +112,18 @@ services:
     container_name: stock-prediction-celery-beat
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stock_prediction
-      API_ENV: development
-      LOG_LEVEL: INFO
+      API_ENV: ${API_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret-key-32chars-min}
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
-      MLFLOW_TRACKING_URI: http://localhost:5000
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - redis
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     command: celery -A app.workers.celery_app beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -105,7 +133,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      MLFLOW_TRACKING_URI: http://localhost:5000
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:
       - mlflow_data:/mlflow
     command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri file:/mlflow
@@ -119,11 +147,13 @@ services:
     container_name: stock-prediction-frontend
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    environment:
+      # The browser calls the API directly, so this must be a URL reachable
+      # from the browser, not the compose service name.
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 

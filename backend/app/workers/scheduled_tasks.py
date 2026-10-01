@@ -49,7 +49,7 @@ def daily_market_ingestion() -> dict[str, Any]:
                 start_date = latest + timedelta(days=1)
             else:
                 from app.core.config import get_settings
-                start_date = date.fromisoformat(get_settings().default_start_date)
+                start_date = get_settings().resolved_start_date(end_date)
             if start_date >= end_date:
                 return {"status": "skipped", "reason": "already up to date"}
             result = await service.ingest("^NSEI", start_date.isoformat(), end_date.isoformat())

@@ -14,22 +14,32 @@ The system estimates the probability/direction of subsequent market movement bas
 2. [Architecture](#architecture)
 3. [Technology Stack](#technology-stack)
 4. [Project Structure](#project-structure)
-5. [Setup](#setup)
-6. [Running the Application](#running-the-application)
-7. [Running Tests](#running-tests)
-8. [Docker](#docker)
-9. [API Documentation](#api-documentation)
-10. [ML Methodology](#ml-methodology)
-11. [Explainability](#explainability)
-12. [Model Versioning](#model-versioning)
-13. [Scheduled Ingestion](#scheduled-ingestion)
-14. [Sentiment Analysis](#sentiment-analysis)
-15. [Multi-Index Support](#multi-index-support)
-16. [Deep Learning Models](#deep-learning-models)
-17. [CI/CD](#cicd)
-18. [Limitations](#limitations)
-19. [Future Improvements](#future-improments)
-20. [Data Freshness](#data-freshness)
+5. [Live Development Access](#live-development-access)
+6. [How to Start the Project](#how-to-start-the-project)
+7. [Bootstrapping Data](#bootstrapping-data)
+8. [Running Tests](#running-tests)
+9. [Google Trends Pipeline](#google-trends-pipeline)
+10. [API Documentation](#api-documentation)
+11. [Data Cleaning & Temporal Alignment](#data-cleaning--temporal-alignment)
+12. [Feature Engineering](#feature-engineering)
+13. [Statistical Analysis](#statistical-analysis)
+14. [ML Dataset Preparation](#ml-dataset-preparation)
+15. [ML Methodology](#ml-methodology)
+16. [Security](#security)
+17. [Model Training](#phase-9--model-training)
+18. [Model Evaluation](#phase-10--model-evaluation)
+19. [Prediction API](#phase-11--prediction-api)
+20. [Frontend Dashboard](#phase-12--frontend-dashboard)
+21. [Explainability](#explainability)
+22. [Model Versioning](#model-versioning)
+23. [Scheduled Ingestion](#scheduled-ingestion)
+24. [Sentiment Analysis](#sentiment-analysis)
+25. [Multi-Index Support](#multi-index-support)
+26. [Deep Learning Models](#deep-learning-models)
+27. [CI/CD](#cicd)
+28. [Limitations](#limitations)
+29. [Data Freshness](#data-freshness)
+30. [Future Improvements](#future-improvements)
 
 ---
 
@@ -249,6 +259,9 @@ Services:
 - Celery Worker: background task processing
 - Celery Beat: scheduled task execution
 
+Migrations run automatically on backend start. To populate the database with real
+data, see [Bootstrapping Data](#bootstrapping-data).
+
 ### Option 2: Manual
 
 **Terminal 1 — PostgreSQL:**
@@ -272,19 +285,11 @@ npm install
 npm run dev
 ```
 
----
-
-## Running Tests
-
+**Terminal 4 — First-run data (optional but recommended):**
 ```bash
 cd backend
-pytest -v
+python scripts/bootstrap_demo.py
 ```
-
-Tests run against a dedicated PostgreSQL test database:
-`postgresql+asyncpg://postgres:postgres@localhost:5432/stock_prediction_test`
-
-Each test creates a fresh schema via `drop_all` / `create_all` and disposes the engine afterward.
 
 ---
 
@@ -355,13 +360,10 @@ The provider uses bounded retries through `pytrends`'s built-in retry configurat
 
 For detailed setup instructions, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
 
-### Quick Start
-
-1. Clone the repository
-2. Set up environment: `cp backend/.env.example backend/.env`
-3. Start services: `docker-compose up -d`
-4. Run migrations: `docker-compose exec backend alembic upgrade head`
-5. Access API at http://localhost:8000
+> If you just want to see it running, use
+> [How to Start the Project](#how-to-start-the-project) instead — Docker Compose
+> handles the environment for you. The manual steps below are for working on the
+> code directly.
 
 ### Prerequisites
 
@@ -376,6 +378,7 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 ```
 
 ### Frontend Setup
@@ -387,22 +390,55 @@ npm install
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `backend/.env.example` to `backend/.env` and configure:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/stock_prediction
 API_ENV=development
 LOG_LEVEL=INFO
+# Must be 32+ characters; the app refuses to start otherwise.
+# Generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
+SECRET_KEY=replace-with-a-random-32-plus-character-string
 PYTRENDS_RETRIES=3
 PYTRENDS_SLEEP=1
-DEFAULT_MARKET_SYMBOL=NSEI
-DEFAULT_START_DATE=2018-01-01
-DEFAULT_END_DATE=2025-01-01
+DEFAULT_MARKET_SYMBOL=^NSEI
+DEFAULT_START_DATE=2024-01-01
+# Comma-separated list, or a JSON array. Must include the frontend origin.
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 ---
 
 ## Running the Application
+
+### Quick Start (Docker, clean clone)
+
+```bash
+git clone https://github.com/varnitasthana/stock-market-prediction-google-trends.git
+cd stock-market-prediction-google-trends
+docker compose up --build -d
+```
+
+The backend applies database migrations automatically on boot, so the schema is ready
+without any manual Alembic command.
+
+Populate it with real data (once):
+
+```bash
+docker compose --profile bootstrap run --rm bootstrap
+```
+
+Then open:
+
+| Service | URL |
+|---------|-----|
+| Frontend Dashboard | http://localhost:5173 |
+| API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/api/docs |
+| MLflow UI | http://localhost:5000 |
+
+Stop with `docker compose down`. Add `-v` to also delete the database volume and
+start from scratch.
 
 ### Option 1: Docker Compose (Recommended)
 
@@ -414,28 +450,88 @@ Services:
 - Backend: http://localhost:8000
 - Frontend: http://localhost:5173
 - PostgreSQL: localhost:5432
+- Redis: localhost:6379
+- MLflow: http://localhost:5000
+- Celery Worker: background task processing
+- Celery Beat: scheduled task execution
 
 ### Option 2: Manual
 
-**Backend:**
+**Terminal 1 — PostgreSQL:**
+```bash
+docker compose up -d postgres
+```
+
+**Terminal 2 — Backend:**
 ```bash
 cd backend
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-**Frontend:**
+**Terminal 3 — Frontend:**
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-**Database:**
+**Terminal 4 — First-run data (optional but recommended):**
 ```bash
-# Create database manually or via docker
-psql -U postgres -c "CREATE DATABASE stock_prediction;"
+cd backend
+python scripts/bootstrap_demo.py
+```
+
+---
+
+## Bootstrapping Data
+
+A fresh database has the schema but no rows, so every dashboard page renders empty
+until data is ingested. `scripts/bootstrap_demo.py` fills it using the real upstream
+sources:
+
+```bash
+cd backend
+python scripts/bootstrap_demo.py
+```
+
+| Step | Action | Source |
+|------|--------|--------|
+| 1 | Apply migrations | local |
+| 2 | Seed active search terms | local |
+| 3 | Ingest market history | yfinance |
+| 4 | Ingest Google Trends interest | Google Trends |
+| 5 | Generate engineered features | local |
+
+Useful flags:
+
+| Flag | Effect |
+|------|--------|
+| `--force` | Re-pull even when rows already exist |
+| `--skip-trends` | Skip Google Trends (faster, avoids rate limits) |
+| `--start YYYY-MM-DD` | Override the ingestion window |
+
+The script is idempotent: each step detects existing coverage and skips, so re-running
+it is cheap and safe.
+
+### Google Trends rate limits
+
+Google throttles this hard. Ten terms back-to-back will trigger HTTP 429
+(`too many 429 error responses`), which is expected rather than a bug. If that
+happens:
+
+1. Wait several minutes before retrying.
+2. Re-run — already-stored dates are skipped, so progress is preserved.
+3. Use `--skip-trends` to bootstrap market data and features without touching Google.
+
+For a fresh clone on a shared IP, the reliable sequence is:
+
+```bash
+python scripts/bootstrap_demo.py --skip-trends   # market data + features
+python scripts/bootstrap_demo.py                 # add Google Trends later
 ```
 
 ---
@@ -1534,8 +1630,31 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
 
 - Backend linting with Ruff
 - Backend tests with pytest against PostgreSQL + Redis
+- Migration integrity: migrate an empty database, then `alembic check` to catch
+  drift between migrations and the ORM models
+- Docker Compose config validation
 - Frontend linting with ESLint
 - Frontend build verification
+
+### Deployment Checklist
+
+If you host this yourself, these are the settings that must be right:
+
+| Variable | Notes |
+|----------|-------|
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/db`. Migrations run on boot. |
+| `SECRET_KEY` | At least 32 characters. Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"`. The app refuses to boot otherwise. |
+| `ALLOWED_ORIGINS` | Comma-separated list containing the **frontend** origin, e.g. `https://app.vercel.app`. A JSON array also works. Missing this causes CORS failures in the browser. |
+| `EXPOSE_API_DOCS` | Defaults to `true`. Set `false` to hide `/api/docs`. |
+| `VITE_API_URL` | Build-time value the **browser** uses to reach the API. Must be a publicly reachable URL, not a container hostname. |
+| `API_ENV` | `development` or `production`. |
+
+Two hosting gotchas worth knowing:
+
+- `VITE_API_URL` is baked into the frontend bundle at build time, so changing it
+  requires a frontend rebuild, not just an environment edit.
+- `ALLOWED_ORIGINS` belongs on the **backend**, and `VITE_API_URL` belongs on the
+  **frontend**. They are different variables on different services.
 
 ---
 
