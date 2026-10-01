@@ -1,8 +1,10 @@
+import json
 from datetime import date, timedelta
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, NoDecode
 
 from app.utils import trading_calendar
 
@@ -30,7 +32,14 @@ class Settings(BaseSettings):
     supported_symbols: list[str] = ["^NSEI", "^NSEBANK", "^CNXIT"]
     
     # Security settings
-    allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    #: ``NoDecode`` stops pydantic-settings from running ``json.loads`` on the raw
+    #: env value, which would otherwise raise ``SettingsError`` for the
+    #: comma-separated form documented in ``.env.example``. Both that form and a
+    #: JSON array are accepted.
+    allowed_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
     rate_limit_per_minute: int = 60
     max_request_size: int = 10485760  # 10MB
 
@@ -51,6 +60,17 @@ class Settings(BaseSettings):
     def validate_database_url(cls, v: str) -> str:
         if not v.startswith(("postgresql://", "postgresql+asyncpg://")):
             raise ValueError("DATABASE_URL must be a PostgreSQL connection string")
+        return v
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def validate_allowed_origins(cls, v):
+        """Accept a JSON array or a plain comma-separated list."""
+        if isinstance(v, str):
+            raw = v.strip()
+            if raw.startswith("["):
+                return json.loads(raw)
+            return [origin.strip() for origin in raw.split(",") if origin.strip()]
         return v
 
     model_config = {
