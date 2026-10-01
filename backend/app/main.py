@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -25,6 +26,11 @@ from app.core.rate_limit import RateLimitMiddleware
 
 settings = get_settings()
 
+#: Set ``EXPOSE_API_DOCS=false`` to hide the schema in a public deployment.
+#: Enabled by default because this project is a portfolio/demo artifact whose
+#: reviewers are expected to explore the API surface.
+EXPOSE_API_DOCS = os.getenv("EXPOSE_API_DOCS", "true").lower() in {"1", "true", "yes"}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,8 +45,9 @@ app = FastAPI(
     description="Analyzes Google Trends data for stock market behavior prediction.",
     version="0.2.0",
     lifespan=lifespan,
-    docs_url="/api/docs" if settings.api_env != "production" else None,
-    redoc_url="/api/redoc" if settings.api_env != "production" else None,
+    docs_url="/api/docs" if EXPOSE_API_DOCS else None,
+    redoc_url="/api/redoc" if EXPOSE_API_DOCS else None,
+    openapi_url="/api/openapi.json" if EXPOSE_API_DOCS else None,
 )
 
 # Security headers middleware

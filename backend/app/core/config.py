@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     pytrends_retries: int = 3
     pytrends_sleep: int = 1
     default_market_symbol: str = "^NSEI"
-    default_start_date: str = "2024-01-01"
+    #: ``None`` or empty means "derive from ``default_end_date`` minus
+    #: ``default_lookback_days``" rather than a fixed calendar date.
+    default_start_date: str | None = "2024-01-01"
     # ``None`` or empty means "today". Resolved at request time so the default
     # window can never silently rot the way a hard-coded date does.
     default_end_date: str | None = None

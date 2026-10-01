@@ -66,9 +66,62 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stock_prediction_test
+          SECRET_KEY: ci-secret-key-at-least-32-characters-long
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/1
         run: pytest -q
+
+  migrations:
+    name: Migration Integrity
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stock_prediction
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Migrate an empty database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stock_prediction
+          SECRET_KEY: ci-secret-key-at-least-32-characters-long
+        run: alembic upgrade head
+      # Guards against the failure mode where migrations and the ORM models
+      # drift apart and a fresh deployment serves a missing-column error.
+      - name: Verify migrations match the ORM models
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stock_prediction
+          SECRET_KEY: ci-secret-key-at-least-32-characters-long
+        run: |
+          pip install alembic
+          alembic check
+
+  docker-build:
+    name: Docker Compose Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose --profile bootstrap config --quiet
 
   frontend-lint:
     name: Frontend Lint

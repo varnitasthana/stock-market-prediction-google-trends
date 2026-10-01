@@ -15,6 +15,10 @@ import sys
 sys.path.insert(0, str(project_root))
 
 from app.core.database import Base
+# Importing the models module registers every table on ``Base.metadata``.
+# Without this, autogenerate and ``alembic check`` see an empty target schema
+# and would emit migrations that drop all tables.
+import app.models.database  # noqa: F401
 
 # this is the Alembic Config object
 config = context.config

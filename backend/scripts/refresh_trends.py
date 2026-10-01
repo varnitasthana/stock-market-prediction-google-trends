@@ -46,8 +46,8 @@ async def refresh_trends():
             provider = PytrendsProvider()
             trends_service = TrendsIngestionService(session, provider=provider)
             
-            end_date = date.today().isoformat()
-            start_date = settings.default_start_date
+            end_date = settings.resolved_end_date().isoformat()
+            start_date = settings.resolved_start_date().isoformat()
             
             print(f"\n📅 Date range: {start_date} to {end_date}")
             print("\n⏳ Fetching Google Trends data (this may take a while)...")
