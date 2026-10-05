@@ -1,0 +1,134 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+#
+# Deploy with: New -> Blueprint -> point at this repository.
+#
+# Two values are left for you to set after the first deploy, because each
+# depends on a URL this file cannot know in advance:
+#   - databaseUrl      (Render injects it for the attached Postgres, so the
+#                       DATABASE_URL sync:false below is a fallback only)
+#   - ALLOWED_ORIGINS  (the deployed frontend origin, e.g. https://app.vercel.app)
+
+services:
+  - type: web
+    name: stock-prediction-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    healthCheckPath: /api/health
+    # docker-entrypoint.py applies Alembic migrations before uvicorn starts,
+    # so no separate release command is required.
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stock-prediction-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      # Set this to your deployed frontend origin. Comma-separated or a JSON
+      # array both work. Browsers block cross-origin XHR when this is wrong.
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: PYTRENDS_RETRIES
+        value: "3"
+      # Google rate-limits aggressively; 2s between terms is safer than 1s.
+      - key: PYTRENDS_SLEEP
+        value: "2"
+      - key: DEFAULT_MARKET_SYMBOL
+        value: ^NSEI
+      - key: DEFAULT_START_DATE
+        value: "2024-01-01"
+      - key: STALE_SESSION_THRESHOLD
+        value: "1"
+      # Set to false to hide /api/docs from a public deployment.
+      - key: EXPOSE_API_DOCS
+        value: "true"
+      # Left empty: training skips MLflow logging and still succeeds.
+      - key: MLFLOW_TRACKING_URI
+        value: ""
+
+  - type: worker
+    name: stock-prediction-ingestion
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --queues=ingestion,ml
+    # The web service runs migrations; workers must not race it, and a
+    # filesystem migration failure here should not take ingestion down.
+    envVars:
+      - key: SKIP_MIGRATIONS
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stock-prediction-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_ENV
+        value: production
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: stock-prediction-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: stock-prediction-redis
+          property: connectionString
+
+  - type: worker
+    name: stock-prediction-scheduler
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
+    envVars:
+      - key: SKIP_MIGRATIONS
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stock-prediction-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_ENV
+        value: production
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: stock-prediction-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: stock-prediction-redis
+          property: connectionString
+
+  # Celery broker. `type: keyvalue` is Render's current name for a Redis
+  # instance; `redis` still works but is a deprecated alias. Key Value services
+  # are declared in `services`, not `databases`.
+  #
+  # Celery is optional. If you only need the read-only dashboard, delete the two
+  # worker services and this instance, then trigger ingestion on demand with
+  # POST /api/trends/refresh.
+  - type: keyvalue
+    name: stock-prediction-redis
+    plan: 256mb
+    maxmemoryPolicy: noeviction
+    persistenceMode: off
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Shared only by the Celery services in this Blueprint
+
+databases:
+  - name: stock-prediction-db
+    databaseName: stock_prediction
+    user: postgres
+    plan: basic-256mb
