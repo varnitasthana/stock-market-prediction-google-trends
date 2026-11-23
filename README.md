@@ -1589,12 +1589,13 @@ Models are versioned using **MLflow**:
 
 **Celery + Redis** powers automated data pipelines:
 
-- Daily market data ingestion at 18:00 UTC
-- Daily Google Trends ingestion at 18:30 UTC (rolling 30-day window, so recent dates self-heal after Google publishes late data)
-- Daily sentiment ingestion at 19:00 UTC
-- Daily feature generation at 19:30 UTC
+- Daily market data ingestion at 18:00 IST
+- Daily Google Trends ingestion at 18:30 IST (rolling 30-day window, so recent dates self-heal after Google publishes late data)
+- Daily sentiment ingestion at 19:00 IST
+- Daily feature generation at 19:30 IST
 - Tasks run in separate queues: `ingestion` and `ml`
 - Celery Beat scheduler manages cron-like scheduling
+- GitHub Actions also provides a weekday API refresh fallback when `API_BASE_URL` is configured
 
 ---
 

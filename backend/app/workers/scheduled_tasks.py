@@ -14,14 +14,13 @@ def select_market_ingestion_window(
     from app.utils import trading_calendar
 
     end_date = trading_calendar.latest_expected_session(reference)
-    if latest is not None and latest >= end_date:
-        return None
-
-    start_date = (
-        trading_calendar.next_business_day(latest)
-        if latest is not None
-        else settings.resolved_start_date(end_date)
-    )
+    if latest is not None:
+        if latest >= end_date:
+            start_date = trading_calendar.previous_business_day(end_date)
+        else:
+            start_date = trading_calendar.next_business_day(latest)
+    else:
+        start_date = settings.resolved_start_date(end_date)
     if start_date > end_date:
         return None
     return start_date, end_date
@@ -36,6 +35,8 @@ async def _get_db_session():
 def daily_market_ingestion() -> dict[str, Any]:
     from app.pipeline.market_pipeline import MarketIngestionService
     from app.services.market_data_service import MarketDataService
+    from app.core.config import get_settings
+    from app.utils import trading_calendar
     import asyncio
 
     async def run():
@@ -43,15 +44,17 @@ def daily_market_ingestion() -> dict[str, Any]:
             service = MarketIngestionService(db)
             market_service = MarketDataService(db)
             latest = await market_service.get_latest_date("^NSEI")
-            end_date = date.today()
-            if latest:
-                from datetime import timedelta
-                start_date = latest + timedelta(days=1)
-            else:
-                from app.core.config import get_settings
-                start_date = get_settings().resolved_start_date(end_date)
-            if start_date >= end_date:
-                return {"status": "skipped", "reason": "already up to date"}
+            window = select_market_ingestion_window(
+                latest,
+                get_settings(),
+                trading_calendar.now_ist(),
+            )
+            if window is None:
+                return {
+                    "status": "skipped",
+                    "reason": "no settled NSE session pending",
+                }
+            start_date, end_date = window
             result = await service.ingest("^NSEI", start_date.isoformat(), end_date.isoformat())
             return {"status": "success", "result": result}
 
@@ -62,6 +65,7 @@ def daily_trends_ingestion() -> dict[str, Any]:
     from app.pipeline.trends_pipeline import TrendsIngestionService
     from app.pipeline.trends_provider import PytrendsProvider
     from app.services.search_term_service import SearchTermService
+    from app.utils import trading_calendar
     import asyncio
 
     async def run():
@@ -72,8 +76,8 @@ def daily_trends_ingestion() -> dict[str, Any]:
                 return {"status": "skipped", "reason": "no active search terms"}
             provider = PytrendsProvider()
             trends_service = TrendsIngestionService(db, provider=provider)
-            end_date = date.today().isoformat()
-            start_date = (date.today() - __import__("datetime").timedelta(days=30)).isoformat()
+            end_date = trading_calendar.today().isoformat()
+            start_date = (trading_calendar.today() - __import__("datetime").timedelta(days=30)).isoformat()
             results = await trends_service.ingest_all_terms(start_date, end_date)
             return {"status": "success", "results": results}
 
@@ -96,6 +100,7 @@ def daily_sentiment_ingestion() -> dict[str, Any]:
 def daily_feature_generation() -> dict[str, Any]:
     from app.services.feature_engineering_service import FeatureEngineer
     from app.repositories.search_term_repo import SearchTermRepository
+    from app.utils import trading_calendar
     import asyncio
 
     async def run():
@@ -106,8 +111,9 @@ def daily_feature_generation() -> dict[str, Any]:
             if not term_ids:
                 return {"status": "skipped", "reason": "no search terms"}
             engineer = FeatureEngineer(db)
-            end_date = date.today().isoformat()
-            start_date = (date.today() - __import__("datetime").timedelta(days=30)).isoformat()
+            end = trading_calendar.today()
+            end_date = end.isoformat()
+            start_date = (end - __import__("datetime").timedelta(days=30)).isoformat()
             result = await engineer.generate_features(
                 "^NSEI",
                 term_ids,

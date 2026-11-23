@@ -1,0 +1,36 @@
+name: Daily Data Refresh
+
+on:
+  schedule:
+    - cron: "30 12 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: Refresh deployed market and trends data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip until the public API URL is configured
+        if: ${{ secrets.API_BASE_URL == '' }}
+        run: |
+          echo "::notice::Set the API_BASE_URL repository secret to enable automatic data refresh."
+
+      - name: Refresh NSE market data
+        if: ${{ secrets.API_BASE_URL != '' }}
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 10 \
+            -X POST "${API_BASE_URL%/}/api/market-data/refresh" \
+            -H "Content-Type: application/json" \
+            -d '{"symbol":"^NSEI","lookback_days":30}'
+
+      - name: Refresh Google Trends data
+        if: ${{ secrets.API_BASE_URL != '' }}
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 10 \
+            -X POST "${API_BASE_URL%/}/api/trends/refresh" \
+            -H "Content-Type: application/json" \
+            -d '{}'
