@@ -7,6 +7,13 @@
 
 > **Research project for educational and portfolio purposes only. This is NOT investment advice.**
 
+## Live Demo
+
+**[Open the live stock market prediction dashboard](https://frontend-snowy-seven-60.vercel.app)**
+
+The public demo uses the hosted FastAPI service at
+`https://stock-prediction-api-sowy.onrender.com` and is refreshed for NSE trading sessions.
+
 A production-style end-to-end machine learning system that investigates whether changes in Google search interest for finance-related keywords are associated with subsequent stock-market behaviour for **NIFTY 50** and **SENSEX**.
 
 The system estimates the probability/direction of subsequent market movement based on historical relationships between search activity and market features.
